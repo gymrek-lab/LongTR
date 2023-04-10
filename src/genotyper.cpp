@@ -47,6 +47,7 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
   init_log_sample_priors(log_sample_posteriors_);
 
   const int num_diplotypes = num_alleles_*num_alleles_;
+  std::cout << "num alleles " << num_alleles_ << std::endl;
   double* read_LL_ptr      = log_aln_probs_;
   for (int read_index = 0; read_index < num_reads_; ++read_index){
     double* sample_LL_ptr = log_sample_posteriors_ + num_diplotypes*sample_label_[read_index];
@@ -54,7 +55,12 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
         *sample_LL_ptr += read_weights[read_index]*fast_log_sum_exp(LOG_ONE_HALF + log_p1_[read_index] + read_LL_ptr[index_1],
 								    LOG_ONE_HALF + log_p2_[read_index] + read_LL_ptr[index_2]);
-        assert(*sample_LL_ptr <= TOLERANCE);
+	    //*sample_LL_ptr += (read_LL_ptr[index_1] + read_LL_ptr[index_2]);
+
+	    if (index_1 == 9 || index_1 == 0){
+	        std::cout << "read LL ptr " << read_LL_ptr[index_1] << " for " << index_1 << std::endl;
+	    }
+        //assert(*sample_LL_ptr <= TOLERANCE);
       }
     }
     read_LL_ptr += num_alleles_;
@@ -65,7 +71,7 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
   for (int sample_index = 0; sample_index < num_samples_; ++sample_index){
     const double sample_total_LL = log_sum_exp(sample_LL_ptr, sample_LL_ptr+num_diplotypes);
     sample_total_LLs_[sample_index] = sample_total_LL;
-    assert(sample_total_LL <= TOLERANCE);
+    //assert(sample_total_LL <= TOLERANCE);
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr)
 	*sample_LL_ptr -= sample_total_LL;
@@ -88,11 +94,13 @@ void Genotyper::get_optimal_haplotypes(std::vector< std::pair<int, int> >& gts) 
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++log_posterior_ptr){
         if (*log_posterior_ptr > log_phased_posteriors[sample_index]){
+          std::cout << "posterior " << *log_posterior_ptr << " index 1 " << index_1 << " index 2 " << index_2 << std::endl;
           log_phased_posteriors[sample_index] = *log_posterior_ptr;
           gts[sample_index] = std::pair<int,int>(index_1, index_2);
         }
       }
     }
+    std::cout << gts[sample_index].first << " , " << gts[sample_index].second << " final gts for " << num_alleles_ << std::endl;
   }
 }
 

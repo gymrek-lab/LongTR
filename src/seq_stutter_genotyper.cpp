@@ -94,7 +94,7 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 					if(!find_seq)
 						assembly_data.push_back(make_pair(seq, 1));
 				}
-				acyclic = true;				
+				acyclic = true;
 			}
 			else{ 
 				acyclic = false;
@@ -418,8 +418,10 @@ void SeqStutterGenotyper::add_and_remove_alleles(std::vector< std::vector<int> >
 	num_alleles_ = new_num_alleles;
 
 	// Compute the alignment probabilites for new haplotype sequences if there are any
-	if (added_seq)
+	if (added_seq){
+	    std::cout << "here" << std::endl;
 		calc_hap_aln_probs(realign_to_haplotype, realign_pool, copy_read);
+		}
 
 	// Fix alignment traceback cache (as allele indices have changed)
 	std::map<std::pair<int,int>, AlignmentTrace*> new_trace_cache;
@@ -661,37 +663,35 @@ bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplo
 	std::vector<bool> realign_to_haplotype(num_alleles_, true);	
 	assert(realign_to_haplotype.size() == haplotype_->num_combs());
 	calc_hap_aln_probs(realign_to_haplotype);
-	
 	calc_log_sample_posteriors();
 
-
-	if (ref_vcf_ == NULL){
-		// Look for additional alleles in stutter artifacts and align to them (if necessary)
-		if (!id_and_align_to_stutter_alleles(max_total_haplotypes, logger))
-			return false;
-
-		// Remove alleles with no MAP genotype calls and recompute the posteriors
-		std::vector< std::vector<int> > unused_indices;
-		int num_aff_blocks = 0, num_aff_alleles = 0;
-		get_unused_alleles(false, true, unused_indices, num_aff_blocks, num_aff_alleles);
-		if (num_aff_alleles != 0){
-			logger << "Recomputing sample posteriors after removing " << num_aff_alleles
-				<< " uncalled alleles across " << num_aff_blocks << " blocks" << std::endl;
-			remove_alleles(unused_indices);
-		}
-
-		// Remove alleles with no spanning reads and recompute the posteriors
-		unused_indices.clear();
-		get_unused_alleles(true, false, unused_indices, num_aff_blocks, num_aff_alleles);
-		if (num_aff_alleles != 0){
-			logger << "Recomputing sample posteriors after removing " << num_aff_alleles
-				<< " alleles with no spanning reads across " << num_aff_blocks << " blocks" << std::endl;
-			remove_alleles(unused_indices);
-		}
-	}
-	if (reassemble_flanks_)
-		if (!assemble_flanks(max_total_haplotypes, max_flank_haplotypes, min_flank_freq, logger))
-			return false;
+//	if (ref_vcf_ == NULL){
+//		// Look for additional alleles in stutter artifacts and align to them (if necessary)
+//		if (!id_and_align_to_stutter_alleles(max_total_haplotypes, logger))
+//			return false;
+//
+//		// Remove alleles with no MAP genotype calls and recompute the posteriors
+//		std::vector< std::vector<int> > unused_indices;
+//		int num_aff_blocks = 0, num_aff_alleles = 0;
+//		get_unused_alleles(false, true, unused_indices, num_aff_blocks, num_aff_alleles);
+//		if (num_aff_alleles != 0){
+//			logger << "Recomputing sample posteriors after removing " << num_aff_alleles
+//				<< " uncalled alleles across " << num_aff_blocks << " blocks" << std::endl;
+//			remove_alleles(unused_indices);
+//		}
+//
+//		// Remove alleles with no spanning reads and recompute the posteriors
+//		unused_indices.clear();
+//		get_unused_alleles(true, false, unused_indices, num_aff_blocks, num_aff_alleles);
+//		if (num_aff_alleles != 0){
+//			logger << "Recomputing sample posteriors after removing " << num_aff_alleles
+//				<< " alleles with no spanning reads across " << num_aff_blocks << " blocks" << std::endl;
+//			remove_alleles(unused_indices);
+//		}
+//	}
+//	if (reassemble_flanks_)
+//		if (!assemble_flanks(max_total_haplotypes, max_flank_haplotypes, min_flank_freq, logger))
+//			return false;
 
 	return true;
 }

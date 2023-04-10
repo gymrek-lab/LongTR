@@ -37,6 +37,14 @@ class HaplotypeGenerator {
 
   bool extract_sequence(const Alignment& aln, int32_t start, int32_t end, std::string& seq) const;
 
+  void poa(const std::vector<std::string>& seqs, std::string& consensus) const;
+
+  void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
+
+  void greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters) const;
+
+  bool merge_clusters(const std::vector<std::string>& new_centeroids, std::map<std::string, std::vector<std::string>>& clusters) const;
+
   void gen_candidate_seqs(const std::string& ref_seq, int ideal_min_length,
 			  const std::vector< std::vector<Alignment> >& alignments, const std::vector<std::string>& vcf_alleles,
 			  int32_t& region_start, int32_t& region_end, std::vector<std::string>& sequences) const;
@@ -59,7 +67,7 @@ class HaplotypeGenerator {
     LEFT_PAD                 = 5;
     RIGHT_PAD                = 5;
     MIN_BLOCK_SPACING        = 10;
-    REF_FLANK_LEN            = 35;
+    REF_FLANK_LEN            = 195;
     min_aln_start_           = min_aln_start;
     max_aln_stop_            = max_aln_stop;
   }

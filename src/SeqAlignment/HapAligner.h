@@ -23,6 +23,8 @@ class HapAligner {
    * Align the sequence contained in SEQ_0 -> SEQ_N using the recursion
    * 0 -> 1 -> 2 ... N
    **/
+
+  void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
   void align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 			const char* seq_0, int seq_len,
 			const double* base_log_wrong, const double* base_log_correct,
