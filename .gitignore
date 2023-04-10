@@ -1,0 +1,3 @@
+
+#ignore object files
+src/*.o
