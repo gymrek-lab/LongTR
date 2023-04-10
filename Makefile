@@ -5,7 +5,7 @@
 ## Default compilation flags.
 ## Override with:
 ##   make CXXFLAGS=XXXXX
-CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread #-pedantic -Wunreachable-code -Weverything
+CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread  #-pedantic -Wunreachable-code -Weverything
 
 ## To create a static distribution file, run:
 ##   make static-dist
@@ -14,6 +14,8 @@ LDFLAGS=-static
 else
 LDFLAGS=
 endif
+
+
 
 ## Source code files, add new files to this list
 SRC_COMMON  = src/base_quality.cpp src/error.cpp src/region.cpp src/stringops.cpp src/zalgorithm.cpp src/alignment_filters.cpp src/extract_indels.cpp src/mathops.cpp src/pcr_duplicates.cpp src/bam_io.cpp
@@ -30,8 +32,8 @@ OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
 CEPHES_ROOT=lib/cephes
 HTSLIB_ROOT=lib/htslib
 
-LIBS              = -L./ -lm -L$(HTSLIB_ROOT)/ -lz -L$(CEPHES_ROOT)/ -llzma -lbz2
-INCLUDE           = -Ilib -Ilib/htslib
+LIBS              = -L./ -lm -L$(HTSLIB_ROOT)/ -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -L/projects/ps-gymreklab/helia/HipSTR_LR/spoa/build/lib -lspoa
+INCLUDE           = -Ilib -Ilib/htslib -I/projects/ps-gymreklab/helia/HipSTR_LR/spoa/usr/local/include
 CEPHES_LIB        = lib/cephes/libprob.a
 HTSLIB_LIB        = $(HTSLIB_ROOT)/libhts.a
 
