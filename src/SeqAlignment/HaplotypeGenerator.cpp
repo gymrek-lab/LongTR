@@ -189,47 +189,48 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
   score = dp[n][m];
 }
 
+// Clustering reads based on the similarity between them. The similarity is computed based on edit distance.
 void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters) const {
-  std::vector<std::string> centeroids;
-  centeroids.push_back(seqs[0]); // first centeroid is the first sequence
+  std::vector<std::string> centroids;
+  centroids.push_back(seqs[0]); // first centroid is the first sequence
   clusters[seqs[0]].push_back(seqs[0]);;
   for (int i = 1; i < seqs.size(); i++) {
     int T = 0.1 * seqs[i].size();
     int min_score = INT_MAX;
     int min_cntr;
-    for (int j = 0; j < centeroids.size(); j++) {
+    for (int j = 0; j < centroids.size(); j++) {
       int score;
-      needleman_wunsch(seqs[i], centeroids[j], score);
+      needleman_wunsch(seqs[i], centroids[j], score);
       if (score < min_score) {
         min_score = score;
         min_cntr = j;
       }
     }
-    if (min_score < T) { // the sequence is similar enough to one of the current centeroids
-      clusters[centeroids[min_cntr]].push_back(seqs[i]);
+    if (min_score < T) { // the sequence is similar enough to one of the current centroids
+      clusters[centroids[min_cntr]].push_back(seqs[i]);
     }
-    else { // make a new centeroid
-      centeroids.push_back(seqs[i]);
+    else { // make a new centroid
+      centroids.push_back(seqs[i]);
       clusters[seqs[i]].push_back(seqs[i]);
     }
   }
 }
 
-bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_centeroids, std::map<std::string, std::vector<std::string>>& clusters) const {
+// Optimizing clusters by performing poa in each cluster to
+bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_centroids, std::map<std::string, std::vector<std::string>>& clusters) const {
     bool updated = false;
-    for (int i = 0; i < new_centeroids.size(); i++){
-        int T = 0.1 * new_centeroids[i].size(); // TODO make it constant
-        for (int j = 0; j < new_centeroids.size(); j++){
-            if (i != j && (clusters.find(new_centeroids[i]) != clusters.end()) && (clusters.find(new_centeroids[j]) != clusters.end())){
+    for (int i = 0; i < new_centroids.size(); i++){
+        int T = 0.1 * new_centroids[i].size(); // TODO make it constant
+        for (int j = 0; j < new_centroids.size(); j++){
+            if (i != j && (clusters.find(new_centroids[i]) != clusters.end()) && (clusters.find(new_centroids[j]) != clusters.end())){
                 int score;
-                needleman_wunsch(new_centeroids[i], new_centeroids[j], score); // Find the edit distance between centeroids of two clusters
+                needleman_wunsch(new_centroids[i], new_centroids[j], score); // Find the edit distance between centroids of two clusters
                 if (score < T){
                     updated = true;
-                    // std::cout << score << " " << T << " " << i << " " << j << std::endl;
-                    for (auto seq:clusters[new_centeroids[j]]){
-                        clusters[new_centeroids[i]].push_back(seq); // Merge clusters if the centeroids are similar enough
+                    for (auto seq:clusters[new_centroids[j]]){
+                        clusters[new_centroids[i]].push_back(seq); // Merge clusters if the centroids are similar enough
                     }
-                    clusters.erase(new_centeroids[j]);
+                    clusters.erase(new_centroids[j]);
                 }
             }
         }
@@ -332,41 +333,47 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       }
     }
     if (not_added_sample.size() > samp_reads*0.25){ // TODO make it a constant
+      //std::copy(not_added_sample.begin(),not_added_sample.end(),std::inserter(not_added_total,not_added_total.end()));
       not_added_total.insert(not_added_total.end(), not_added_sample.begin(), not_added_sample.end());
     }
   }
   if (not_added_total.size() > 0) {
+    std::cerr << "Skipped reads " << not_added_total.size() << std::endl;
     std::sort(not_added_total.begin() + 1, not_added_total.end(), orderByLengthAndSequence);
+    not_added_total.erase( unique( not_added_total.begin(), not_added_total.end() ), not_added_total.end()); //remove duplicate elements
     std::map<std::string, std::vector<std::string>> clusters;
     greedy_clustering(not_added_total, clusters);
 
     bool not_converged = true;
-    // refining clusters by replacing centeroids from one of the
+    // refining clusters by replacing centroids from one of the
     // sequences to partial order alignment of strings in each cluster
     // continue until convergence
     while (not_converged) {
-         // std::cout << "round " << std::endl;
          std::map<std::string, std::vector<std::string>> updated_clusters;
-         std::vector<std::string> new_centeroids;
+         std::vector<std::string> new_centroids;
          for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-              // std::cout << "centeroid " << iter->first << " " << iter->second.size() << std::endl;
+              // std::cout << "centroid " << iter->first << " " << iter->second.size() << std::endl;
               std::string consensus;
-              poa(iter->second, consensus); // Find the centeroid of each cluster by performing poa on strings of each cluster
-              new_centeroids.push_back(consensus);
+              poa(iter->second, consensus); // Find the centroid of each cluster by performing poa on strings of each cluster
+              new_centroids.push_back(consensus);
               // std::cout << "consensus  " << consensus << std::endl;
               updated_clusters[consensus] = iter->second;
          }
-         std::sort(new_centeroids.begin() + 1, new_centeroids.end(), orderByLengthAndSequence);
-         not_converged = merge_clusters(new_centeroids, updated_clusters);
+         std::sort(new_centroids.begin() + 1, new_centroids.end(), orderByLengthAndSequence);
+         not_converged = merge_clusters(new_centroids, updated_clusters);
          clusters = updated_clusters;
     }
 
-     // Add centeroids of refined clusters to haplotype sequences
+     // Add centroids of refined clusters to haplotype sequences
      for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-       std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
-       if (iter->second.size() > 9) sequences.push_back(iter->first); // only include clusters that have considerable reads.
+       //std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
+       if (iter->second.size() > 9) { // only include clusters that have considerable reads.
+        std::cerr << "added haplotype of size " << iter->first.size() << std::endl;
+        if (std::find(sequences.begin(), sequences.end(), iter->first) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
+            sequences.push_back(iter->first);
+        }
+       }
      }
-
   }
 
   // Sort regions by length and then by sequence (apart from reference sequence)
