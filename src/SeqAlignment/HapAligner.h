@@ -26,10 +26,7 @@ class HapAligner {
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
   void align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
-			const char* seq_0, int seq_len,
-			const double* base_log_wrong, const double* base_log_correct,
-			double* match_matrix, double* insert_matrix, double* deletion_matrix,
-			int* best_artifact_size, int* best_artifact_pos, double& left_prob);
+			const char* seq_0, int seq_len, double& left_prob);
 
   /**
    * Compute the log-probability of the alignment given the alignment matrices for the left and right segments.
@@ -48,6 +45,13 @@ class HapAligner {
 
   void calc_best_seed_position(int32_t region_start, int32_t region_end,
 			       int32_t& best_dist, int32_t& best_pos);
+
+
+  /**
+  * Trim alignment before aligning to haplotype
+  **/
+
+  void trim_alignment(const Alignment& aln, std::string& trimmed_seq);
 
 
   // Private unimplemented copy constructor and assignment operator to prevent operations
