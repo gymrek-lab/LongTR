@@ -23,6 +23,7 @@ class HapBlock {
   int32_t start_; // Start of region (inclusive)
   int32_t end_;   // End of region (not inclusive)
   int min_size_, max_size_;
+  std::vector<bool> inexact_alt_seq_;
 
   std::vector<int*> l_homopolymer_lens_;
   std::vector<int*> r_homopolymer_lens_;
@@ -66,7 +67,10 @@ class HapBlock {
   int max_size()    const { return max_size_; }
   bool contains(const std::string& seq) const { return seq_set_.find(seq) != seq_set_.end(); }
 
-  virtual void add_alternate(const std::string& alt) {
+
+  virtual void add_alternate(const std::pair<std::string, bool>& alt_seq) {
+    std::string alt = alt_seq.first;
+    inexact_alt_seq_.push_back(alt_seq.second);
     alt_seqs_.push_back(alt);
     min_size_ = std::min(min_size_, (int)alt.size());
     max_size_ = std::max(max_size_, (int)alt.size());
@@ -98,6 +102,15 @@ class HapBlock {
       throw std::out_of_range("Index out of bounds in HapBlock::get_seq()");
   }
 
+  const bool get_inexact(unsigned int index) const {
+    if (index == 0)
+      return false;
+    else if (index-1 < alt_seqs_.size())
+      return inexact_alt_seq_[index-1];
+    else
+      throw std::out_of_range("Index out of bounds in HapBlock::get_inexact()");
+  }
+
   inline int suffix_match_len(unsigned int seq_index) const {
     assert(seq_index < suffix_matches_.size());
     return suffix_matches_[seq_index];
@@ -120,7 +133,7 @@ class HapBlock {
     for (unsigned int i = 0; i < alt_seqs_.size(); i++) {
       std::string alt = alt_seqs_[i];
       std::reverse(alt.begin(), alt.end());
-      rev_block->add_alternate(alt);
+      rev_block->add_alternate(std::pair<std::string, bool>(alt, inexact_alt_seq_[i]));
     }
     return rev_block;
   }
@@ -142,7 +155,7 @@ class HapBlock {
     HapBlock* new_block = new HapBlock(start_, end_, ref_seq_);
     for (unsigned int i = 0; i < alt_seqs_.size(); i++)
       if (bad_alleles.find(i+1) == bad_alleles.end())
-        new_block->add_alternate(alt_seqs_[i]);
+        new_block->add_alternate(std::pair<std::string, bool>(alt_seqs_[i], inexact_alt_seq_[i]));
     return new_block;
   }
 };
