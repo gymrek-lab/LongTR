@@ -10,10 +10,10 @@
 #include "RepeatBlock.h"
 #include "../stringops.h"
 
-void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32_t& region_end, std::vector<std::string>& sequences) const {
+void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences) const {
   int min_len = INT_MAX;
   for (unsigned int i = 0; i < sequences.size(); i++)
-    min_len = std::min(min_len, (int)sequences[i].size());
+    min_len = std::min(min_len, (int)sequences[i].first.size());
   if (min_len <= ideal_min_length)
     return;
 
@@ -21,7 +21,7 @@ void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32
   while (max_left_trim < min_len-ideal_min_length){
     unsigned int j = 1;
     while (j < sequences.size()){
-      if (sequences[j][max_left_trim] != sequences[j-1][max_left_trim])
+      if (sequences[j].first[max_left_trim] != sequences[j-1].first[max_left_trim])
 	break;
       j++;
     }
@@ -30,10 +30,10 @@ void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32
     max_left_trim++;
   }
   while (max_right_trim < min_len-ideal_min_length){
-    char c = sequences[0][sequences[0].size()-1-max_right_trim];
+    char c = sequences[0].first[sequences[0].first.size()-1-max_right_trim];
     unsigned int j = 1;
     while (j < sequences.size()){
-      if (sequences[j][sequences[j].size()-1-max_right_trim] != c)
+      if (sequences[j].first[sequences[j].first.size()-1-max_right_trim] != c)
 	break;
       j++;
     }
@@ -75,12 +75,17 @@ void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32
 
   // Adjust sequences and position
   for (unsigned int i = 0; i < sequences.size(); i++)
-    sequences[i] = sequences[i].substr(left_trim, sequences[i].size()-left_trim-right_trim);
+    sequences[i].first = sequences[i].first.substr(left_trim, sequences[i].first.size()-left_trim-right_trim);
   region_start += left_trim;
   region_end   -= right_trim;
 }
 
 bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_start, int32_t region_end, std::string& seq) const {
+  if (aln.get_deleted()){ // repeat is deleted
+    seq = "";
+    return true;
+  }
+
   if (aln.get_start() >= region_start) return false;
   if (aln.get_stop()  <= region_end)   return false;
 
@@ -90,6 +95,12 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
   auto cigar_iter = aln.get_cigar_list().begin();
   // Extract region sequence if fully spanned by alignment
   std::stringstream reg_seq;
+
+
+  if (aln.get_deleted() == true){ // Repeat is deleted
+    seq = "";
+    return true;
+  }
   while (cigar_iter != aln.get_cigar_list().end()){
     if (char_index == cigar_iter->get_num()){
       cigar_iter++;
@@ -240,7 +251,7 @@ bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_cent
 
 void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int ideal_min_length,
 					    const std::vector< std::vector<Alignment> >& alignments, const std::vector<std::string>& vcf_alleles,
-					    int32_t& region_start, int32_t& region_end, std::vector<std::string>& sequences) const {
+					    int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences) const {
   assert(sequences.empty());
   std::map<std::string, double> sample_counts;
   std::map<std::string, int> read_counts, must_inc;
@@ -274,7 +285,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   // Add VCF alleles to list (apart from reference sequence) and remove from other data structures
   int ref_index = -1;
   for (unsigned int i = 0; i < vcf_alleles.size(); i++){
-    sequences.push_back(vcf_alleles[i]);
+    sequences.push_back(std::pair<std::string,bool>(vcf_alleles[i],false));
     auto iter_1 = sample_counts.find(vcf_alleles[i]);
     if (iter_1 != sample_counts.end()){
       sample_counts.erase(iter_1);
@@ -294,7 +305,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       auto iter_2 = read_counts.find(iter->first);
       sample_counts.erase(iter_1);
       read_counts.erase(iter_2);
-      sequences.push_back(iter->first);
+      sequences.push_back(std::pair<std::string,bool>(iter->first,false));
       if (iter->first.compare(ref_seq) == 0)
 	ref_index = sequences.size()-1;
     }
@@ -303,7 +314,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   // Identify additional alleles satisfying thresholds
   for (auto iter = sample_counts.begin(); iter != sample_counts.end(); iter++){
     if (iter->second > MIN_FRAC_SAMPLES*tot_samples || read_counts[iter->first] > MIN_FRAC_READS*tot_reads){
-      sequences.push_back(iter->first);
+      sequences.push_back(std::pair<std::string,bool>(iter->first,false));
       if (ref_index == -1 && (iter->first.compare(ref_seq) == 0))
 	ref_index = sequences.size()-1;
     }
@@ -311,15 +322,14 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   
   // Arrange reference sequence as first element
   if (ref_index == -1)
-    sequences.insert(sequences.begin(), ref_seq);
+    sequences.insert(sequences.begin(), std::pair<std::string,bool>(ref_seq,false));
   else {
     sequences[ref_index] = sequences[0];
-    sequences[0]         = ref_seq;
+    sequences[0]         = std::pair<std::string,bool>(ref_seq,false);
   }
 
-
   // Identify how many alignments don't have a candidate haplotype:
-  std::vector<std::string> not_added_total;
+  std::vector<std::vector<std::string>> not_added_all_samples;
   for (unsigned int i = 0; i < alignments.size(); i++){
     std::vector<std::string> not_added_sample;
     int samp_reads = 0;
@@ -327,64 +337,67 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       std::string subseq;
       if (extract_sequence(alignments[i][j], region_start, region_end, subseq)) {
         samp_reads++;
-        if (std::find(sequences.begin(), sequences.end(), subseq) == sequences.end()) {
+        if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(subseq,false)) == sequences.end()) {
           not_added_sample.push_back(subseq);
         }
       }
     }
     if (not_added_sample.size() > samp_reads*0.25){ // TODO make it a constant
-      //std::copy(not_added_sample.begin(),not_added_sample.end(),std::inserter(not_added_total,not_added_total.end()));
-      not_added_total.insert(not_added_total.end(), not_added_sample.begin(), not_added_sample.end());
+      not_added_all_samples.push_back(not_added_sample);
     }
   }
-  if (not_added_total.size() > 0) {
-    std::cerr << "Skipped reads " << not_added_total.size() << std::endl;
-    std::sort(not_added_total.begin() + 1, not_added_total.end(), orderByLengthAndSequence);
-    not_added_total.erase( unique( not_added_total.begin(), not_added_total.end() ), not_added_total.end()); //remove duplicate elements
-    std::map<std::string, std::vector<std::string>> clusters;
-    greedy_clustering(not_added_total, clusters);
+  if (not_added_all_samples.size() > 0) {
+    for (auto not_added_total:not_added_all_samples){
+        std::cerr << "Skipped reads " << not_added_total.size() << std::endl;
+        not_added_total.erase(unique( not_added_total.begin(), not_added_total.end() ), not_added_total.end()); //remove duplicate elements
+        std::sort(not_added_total.begin() + 1, not_added_total.end(), orderByLengthAndSequence);
+        std::map<std::string, std::vector<std::string>> clusters;
+        greedy_clustering(not_added_total, clusters);
 
-    bool not_converged = true;
-    // refining clusters by replacing centroids from one of the
-    // sequences to partial order alignment of strings in each cluster
-    // continue until convergence
-    while (not_converged) {
-         std::map<std::string, std::vector<std::string>> updated_clusters;
-         std::vector<std::string> new_centroids;
-         for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-              // std::cout << "centroid " << iter->first << " " << iter->second.size() << std::endl;
-              std::string consensus;
-              poa(iter->second, consensus); // Find the centroid of each cluster by performing poa on strings of each cluster
-              new_centroids.push_back(consensus);
-              // std::cout << "consensus  " << consensus << std::endl;
-              updated_clusters[consensus] = iter->second;
-         }
-         std::sort(new_centroids.begin() + 1, new_centroids.end(), orderByLengthAndSequence);
-         not_converged = merge_clusters(new_centroids, updated_clusters);
-         clusters = updated_clusters;
-    }
+        bool not_converged = true;
+        // refining clusters by replacing centroids from one of the
+        // sequences to partial order alignment of strings in each cluster
+        // continue until convergence
+        while (not_converged) {
+             std::map<std::string, std::vector<std::string>> updated_clusters;
+             std::vector<std::string> new_centroids;
+             for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
+                  std::string consensus;
+                  poa(iter->second, consensus); // Find the centroid of each cluster by performing poa on strings of each cluster
+                  if (std::find(new_centroids.begin(), new_centroids.end(), consensus) == new_centroids.end()){
+                      new_centroids.push_back(consensus);
+                      updated_clusters[consensus] = iter->second;
+                  }
+                  else{ //new consensus is already in the set of centroids, so just append the elements in its cluster to the previous cluster
+                    updated_clusters[consensus].insert(updated_clusters[consensus].end(), iter->second.begin(), iter->second.end());
+                  }
 
-     // Add centroids of refined clusters to haplotype sequences
-     for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-       //std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
-       if (iter->second.size() > 9) { // only include clusters that have considerable reads.
-        std::cerr << "added haplotype of size " << iter->first.size() << std::endl;
-        if (std::find(sequences.begin(), sequences.end(), iter->first) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
-            sequences.push_back(iter->first);
+             }
+             std::sort(new_centroids.begin() + 1, new_centroids.end(), orderByLengthAndSequence);
+             not_converged = merge_clusters(new_centroids, updated_clusters);
+             clusters = updated_clusters;
         }
+
+         // Add centroids of refined clusters to haplotype sequences
+         for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
+           //std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
+           if (iter->second.size() > 9) { // only include clusters that have considerable reads.
+            std::cerr << "Added inexat haplotype of size " << iter->first.size() << std::endl;
+            if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
+            std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
+                sequences.push_back(std::pair<std::string,bool>(iter->first,true));
+            }
+         }
        }
      }
   }
 
-  // Sort regions by length and then by sequence (apart from reference sequence)
-  std::sort(sequences.begin()+1, sequences.end(), orderByLengthAndSequence);
-
-  for (auto seq:sequences){
-    std::cout << "candidate haplotype size: " << seq.size() << std::endl;
-  }
+  //Sort regions by length and then by sequence (apart from reference sequence)
+  std::sort(sequences.begin()+1, sequences.end(), orderByLengthAndSequencePair);
 
   // Clip identical regions
   trim(ideal_min_length, region_start, region_end, sequences);
+
 }
 
 void HaplotypeGenerator::get_aln_bounds(const std::vector< std::vector<Alignment> >& alignments,
@@ -424,7 +437,7 @@ bool HaplotypeGenerator::add_vcf_haplotype_block(int32_t pos, const std::string&
   hap_blocks_.push_back(new RepeatBlock(region_start, region_end, uppercase(vcf_alleles[0]), stutter_model->period(), stutter_model));
   for (unsigned int i = 1; i < vcf_alleles.size(); i++){
     std::string seq = uppercase(vcf_alleles[i]);
-    hap_blocks_.back()->add_alternate(seq);
+    hap_blocks_.back()->add_alternate(std::pair<std::string, bool>(seq, false));
   }
 
   return true;
@@ -465,7 +478,7 @@ bool HaplotypeGenerator::add_haplotype_block(const Region& region, const std::st
   }
   
   // Extract candidate STR sequences (using some padding to ensure indels near STR ends are included)
-  std::vector<std::string> sequences;
+  std::vector<std::pair<std::string, bool>> sequences;
   int ideal_min_length = 3*region.period(); // Would ideally have at least 3 repeat units in each allele after trimming
   gen_candidate_seqs(ref_seq, ideal_min_length, alignments, padded_vcf_alleles, region_start, region_end, sequences);
 
@@ -476,9 +489,10 @@ bool HaplotypeGenerator::add_haplotype_block(const Region& region, const std::st
   }
 
   // Add the new haplotype block
-  hap_blocks_.push_back(new RepeatBlock(region_start, region_end, sequences.front(), stutter_model->period(), stutter_model));
-  for (unsigned int i = 1; i < sequences.size(); i++)
+  hap_blocks_.push_back(new RepeatBlock(region_start, region_end, sequences.front().first, stutter_model->period(), stutter_model));
+  for (unsigned int i = 1; i < sequences.size(); i++){
     hap_blocks_.back()->add_alternate(sequences[i]);
+    }
   return true;
 }
 

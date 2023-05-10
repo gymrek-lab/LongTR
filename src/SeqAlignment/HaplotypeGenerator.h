@@ -33,7 +33,7 @@ class HaplotypeGenerator {
   std::vector<HapBlock*> hap_blocks_;
 
   void trim(int ideal_min_length,
-	    int32_t& region_start, int32_t& region_end, std::vector<std::string>& sequences) const;
+	    int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences) const;
 
   bool extract_sequence(const Alignment& aln, int32_t start, int32_t end, std::string& seq) const;
 
@@ -47,7 +47,7 @@ class HaplotypeGenerator {
 
   void gen_candidate_seqs(const std::string& ref_seq, int ideal_min_length,
 			  const std::vector< std::vector<Alignment> >& alignments, const std::vector<std::string>& vcf_alleles,
-			  int32_t& region_start, int32_t& region_end, std::vector<std::string>& sequences) const;
+			  int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences) const;
 
   void get_aln_bounds(const std::vector< std::vector<Alignment> >& alignments,
 		      int32_t& min_aln_start, int32_t& max_aln_stop) const;
