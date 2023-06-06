@@ -29,21 +29,19 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 				  const char* seq_0, int seq_len, double& left_prob){
   // NOTE: Input matrix structure: Row = Haplotype position, Column = Read index
 
-  double* L_log_probs = new double[seq_len];
 
-  //std::cout << "haplotype string: " << haplotype->get_seq() << "\n read sequence " << seq_0 << std::endl;
+
+  double* L_log_probs = new double[seq_len];
 
   // Initialize first row of matrix (each base position matched with leftmost haplotype base)
   left_prob = 0.0;
   char first_hap_base = haplotype->get_first_char();
   std::string read_seq = seq_0;
-  //std::cout << "seq " << seq_trimmed << std::endl;
-
+  if (haplotype->get_seq().size() <= 50){ //TODO, it usually happens in case of big deletions
+    left_prob = IMPOSSIBLE;
+    return;
+  }
   std::string haplotype_seq = haplotype->get_seq().substr(25, haplotype->get_seq().size() - 50);
-  //std::string haplotype_seq = haplotype->get_seq();
-
-  //std::cout << "hap " << haplotype_seq << std::endl;
-
   int n = haplotype_seq.size();
   int m = read_seq.size();
   double match_matrix_[n][m];
@@ -55,7 +53,6 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   int MISMATCH = -3;
 
   double coefficient = 0.5;
-
   for (int i = 0; i < m; ++i){
     match_matrix_[0][i]    = (read_seq[i] == haplotype_seq[0] ? 0 : coefficient*MISMATCH) + left_prob;
     insert_matrix_[0][i]   = IMPOSSIBLE;
@@ -71,7 +68,6 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
     left_prob += coefficient*LOG_INS_TO_INS;
   }
 
-
   for (int j = 1; j < n; j++){
     for (int i = 1; i < m; i++){
 	  double match_emit     = (haplotype_seq[j] == read_seq[i] ? 0 : coefficient*MISMATCH);
@@ -84,20 +80,13 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 						   deletion_matrix_[j-1][i] + coefficient*LOG_DEL_TO_DEL);
     }
  }
-
  left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
- //std::cout << "del " << deletion_matrix_[n-1][m-1] << " ins " << insert_matrix_[n-1][m-1] << " match " << match_matrix_[n-1][m-1] << std::endl;
- //std::cout << "alignment of sequence with size " << read_seq.size() - 10 << " to haplotype with size " << haplotype_seq.size() - 10 << " with l_prob " << left_prob << std::endl;
-
+ //std::cout << "alignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
 }
 
 
 void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     int32_t pos          = aln.get_start();
-//    if (repeat_starts_.size() > 1){
-//        std::cout << "more than 1 repeat at " << repeat_starts_[0] << std::endl;
-//    }
-
     int32_t padding = 5;
     int32_t min_read_start = repeat_starts_[0] - padding;
     int32_t max_read_stop = repeat_ends_[0] + padding;
@@ -109,17 +98,10 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     int32_t rtrim = 0;
     int32_t ltrim = 0;
 
-    //std::cout << min_read_start << " " << max_read_stop << " " << start_pos << " " << end_pos << std::endl;
-
-
-
-
     std::vector<CigarElement> cigar_ops_ = aln.get_cigar_list();
 
     // left region
-    //std::cout << "cigar " << aln.getCigarString() << std::endl;
     while ((start_pos <= min_read_start) && cigar_ops_.size() > 0){
-        //std::cout << start_pos << " " << ltrim << std::endl;
         switch(cigar_ops_.front().get_type()){
             case 'M': case '=': case 'X':
               ltrim++;
@@ -146,7 +128,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     // left flank
     int mid_pointer = start_pos;
     while ((mid_pointer > min_read_start) && (mid_pointer <= min_read_start + padding) && cigar_ops_.size() > 0){
-       //std::cout << mid_pointer << " " << ltrim << std::endl;
        switch(cigar_ops_.front().get_type()){
             case 'M': case '=': case 'X':
               mid_pointer++;
@@ -172,7 +153,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
 
     // right region
     while ((end_pos > max_read_stop) && cigar_ops_.size() > 0 && cigar_ops_.size() > 0){
-        //std::cout << "end pos " << end_pos << std::endl;
         switch(cigar_ops_.back().get_type()){
             case 'M': case '=': case 'X':
               rtrim++;
@@ -199,7 +179,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     // right flank
     mid_pointer = end_pos;
     while ((mid_pointer > max_read_stop - padding) && (mid_pointer <= max_read_stop) && cigar_ops_.size() > 0){
-       //std::cout << mid_pointer << " " << cigar_ops_.back().get_type() << std::endl;
        switch(cigar_ops_.back().get_type()){
             case 'M': case '=': case 'X':
               mid_pointer--;
@@ -225,7 +204,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
 
   if (ltrim < 0) ltrim = 0;
   if (rtrim < 0) rtrim = 0;
-  //std::cout << ltrim << " " << rtrim << std::endl;
   assert(ltrim+rtrim <= alignment_size);
   trimmed_seq     = aln.get_sequence().substr(ltrim, alignment_size-ltrim-rtrim);
   }
@@ -233,8 +211,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
 
 void HapAligner::process_reads(const std::vector<Alignment>& alignments, int init_read_index, const BaseQuality* base_quality, const std::vector<bool>& realign_read,
 			       double* aln_probs, int* seed_positions){
-    //std::cout << "process reads called" << std::endl;
-
   assert(alignments.size() == realign_read.size());
   AlignmentTrace trace(fw_haplotype_->num_blocks());
   double* prob_ptr = aln_probs + (init_read_index*fw_haplotype_->num_combs());
@@ -244,18 +220,11 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
       continue;
     }
 
-    //int seed_base = calc_seed_base(alignments[i]);
     int seed_base = alignments[i].get_sequence().size() - 1;
     seed_positions[init_read_index+i] = seed_base;
-    if (seed_base == -1){
-      // Assign all haplotypes the same zero LL
-      for (unsigned int i = 0; i < fw_haplotype_->num_combs(); ++i, ++prob_ptr)
-	*prob_ptr = 0;
-    }
-    else {
-      process_read(alignments[i], seed_base, base_quality, false, prob_ptr, trace);
-      prob_ptr += fw_haplotype_->num_combs();
-    }
+    process_read(alignments[i], seed_base, base_quality, false, prob_ptr, trace);
+    prob_ptr += fw_haplotype_->num_combs();
+
   }
 }
 
@@ -489,7 +458,7 @@ std::string HapAligner::retrace(Haplotype* haplotype, const char* read_seq, cons
 
 void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQuality* base_quality, bool retrace_aln,
 			      double* prob_ptr, AlignmentTrace& trace){
-  assert(seed_base != -1);
+  //assert(seed_base != -1);
   assert(aln.get_sequence().size() == aln.get_base_qualities().size());
   // Extract probabilites related to base quality scores
   double* base_log_wrong   = new double[aln.get_sequence().size()]; // log10(Prob(error))
@@ -501,17 +470,15 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
     base_log_wrong[j] = -10.5392;
     base_log_correct[j] = -7.9436e-05;
 }
-
-  //std::cout << "original alignment " << aln.get_sequence() << std::endl;
   // Here we trim the read sequence because the flanking regions are too long for alignment to haplotypes
   std::string base_seq_str;
   trim_alignment(aln, base_seq_str);
   if (base_seq_str.size() == 0){
-        base_seq_str = aln.get_sequence(); //TODO fix when alignment is too short
+        base_seq_str += fw_haplotype_->get_first_block()->get_seq(0).substr(25);
+        base_seq_str += fw_haplotype_->get_last_block()->get_seq(0).substr(0,5);
     }
   int base_seq_len = (int)base_seq_str.size();
-  const char* base_seq = base_seq_str.c_str(); //TODO make these constant and based on original padding
-  //base_seq_len     = base_seq_len - 380;
+  const char* base_seq = base_seq_str.c_str();
   seed_base = base_seq_len - 1;
 
   // Allocate scoring matrices based on the maximum haplotype size
@@ -520,7 +487,7 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
   double max_LL             = -100000000;
 
   // Reverse bases and quality scores for the right flank
-  std::string rev_rseq = aln.get_sequence().substr(seed_base+1);
+  std::string rev_rseq = base_seq_str.substr(seed_base+1);
   std::reverse(rev_rseq.begin(), rev_rseq.end());
   std::reverse(base_log_wrong+seed_base+1,   base_log_wrong+base_seq_len);
   std::reverse(base_log_correct+seed_base+1, base_log_correct+base_seq_len);
