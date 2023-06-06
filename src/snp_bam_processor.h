@@ -14,7 +14,7 @@
 #include "vcf_reader.h"
 
 const std::string HAPLOTYPE_TAG = "HP";
-const double FROM_HAP_LL        = -0.01;   // Log-likelihood read comes from a haplotype if it matches BAM HP tag
+const double FROM_HAP_LL        = -0.000001;   // Log-likelihood read comes from a haplotype if it matches BAM HP tag
 const double OTHER_HAP_LL       = -1000.0; // Log-likelihood read comes from a haplotype if it differs from BAM HP tag
 
 class SNPBamProcessor : public BamProcessor {
