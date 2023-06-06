@@ -236,7 +236,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
 	}
 
 	int32_t length = alignment.Length();
-	alignment.TrimLowQualityEnds(BASE_QUAL_TRIM);
+	//alignment.TrimLowQualityEnds(BASE_QUAL_TRIM);
 	if (alignment.Position() < region_group.stop() && alignment.GetEndPosition() >= region_group.start())
 	  if ((alignment.Length() == 0) || (alignment.Length() < length/2))
 	    continue;
