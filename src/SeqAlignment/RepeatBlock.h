@@ -36,10 +36,10 @@ class RepeatBlock : public HapBlock {
       stutter_aligners_.clear();
     }
 
-    void add_alternate(const std::string& alt){
+    void add_alternate(const std::pair<std::string, bool>& alt){
       HapBlock::add_alternate(alt);
-      repeat_info_->add_alternate_allele(alt);
-      stutter_aligners_.push_back(new StutterAlignerClass(alt, repeat_info_->get_period(), !reversed_, repeat_info_));
+      repeat_info_->add_alternate_allele(alt.first);
+      stutter_aligners_.push_back(new StutterAlignerClass(alt.first, repeat_info_->get_period(), !reversed_, repeat_info_));
     }
 
     StutterAlignerClass* get_stutter_aligner(int seq_index){ return stutter_aligners_[seq_index]; }
@@ -52,7 +52,7 @@ class RepeatBlock : public HapBlock {
       for (unsigned int i = 0; i < alt_seqs_.size(); i++) {
 	std::string alt = alt_seqs_[i];
 	std::reverse(alt.begin(), alt.end());
-	rev_block->add_alternate(alt);
+	rev_block->add_alternate(std::pair<std::string,bool>(alt,inexact_alt_seq_[i]));
       }
       return rev_block;
     }
@@ -64,7 +64,7 @@ class RepeatBlock : public HapBlock {
       RepeatBlock* new_block = new RepeatBlock(start_, end_, ref_seq_, repeat_info_->get_period(), repeat_info_->get_stutter_model(), reversed_);
       for (unsigned int i = 0; i < alt_seqs_.size(); i++)
 	if (bad_alleles.find(i+1) == bad_alleles.end())
-	  new_block->add_alternate(alt_seqs_[i]);
+	  new_block->add_alternate(std::pair<std::string,bool>(alt_seqs_[i],inexact_alt_seq_[i]));
       return new_block;
     }
 };
