@@ -53,6 +53,7 @@ public:
   bool built_;
   int32_t length_;
   int32_t pos_, end_pos_;
+  bool deleted_;
 
   BamAlignment(){
     b_       = bam_init1();
@@ -60,6 +61,7 @@ public:
     length_  = -1;
     pos_     = 0;
     end_pos_ = -1;
+    deleted_ = false;
   }
 
   BamAlignment(const BamAlignment &aln)
@@ -70,6 +72,7 @@ public:
     length_    = aln.length_;
     pos_       = aln.pos_;
     end_pos_   = aln.end_pos_;
+    deleted_ = false;
   }
 
   BamAlignment& operator=(const BamAlignment& aln){
@@ -84,12 +87,16 @@ public:
     bases_     = aln.bases_;
     qualities_ = aln.qualities_;
     cigar_ops_ = aln.cigar_ops_;
+    deleted_ = false;
     return *this;
   }
 
   ~BamAlignment(){
     bam_destroy1(b_);
   }
+
+
+  bool GetDeleted() const {return deleted_; }
 
   /* Number of bases */
   int32_t Length()              const { return length_;  }

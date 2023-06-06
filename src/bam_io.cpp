@@ -391,16 +391,16 @@ void BamAlignment::TrimAlignment(int32_t min_read_start, int32_t max_read_stop, 
   while ((start_pos < min_read_start) && cigar_ops_.size() > 0){
     // Check if we should stop trimming b/c the quality score is above the threshold
     bool qual_above_thresh = false;
-    switch (cigar_ops_.front().Type){
-    case 'M': case '=': case 'X': case 'I': case 'S':
-      qual_above_thresh = (qualities_[ltrim] > min_base_qual);
-      break;
-    case 'D': case 'H':
-      break;
-    default:
-      printErrorAndDie("Invalid CIGAR option encountered in trimAlignment");
-      break;
-    }
+//    switch (cigar_ops_.front().Type){
+//    case 'M': case '=': case 'X': case 'I': case 'S':
+//      qual_above_thresh = (qualities_[ltrim] > min_base_qual);
+//      break;
+//    case 'D': case 'H':
+//      break;
+//    default:
+//      printErrorAndDie("Invalid CIGAR option encountered in trimAlignment");
+//      break;
+//    }
     if (qual_above_thresh)
       break;
 
@@ -427,24 +427,60 @@ void BamAlignment::TrimAlignment(int32_t min_read_start, int32_t max_read_stop, 
       cigar_ops_.front().Length--;
   }
 
+
+  int32_t repeat_pointer = start_pos;
+  int32_t repeat_start = min_read_start + 35;
+  int32_t repeat_end = max_read_stop - 35;
+  int32_t deletion_size = 0;
+
+
+  std::vector<CigarOp> cigar_ops_tmp = cigar_ops_;
+
+  while ((repeat_pointer >= min_read_start) && (repeat_pointer < repeat_end) && cigar_ops_tmp.size() > 0){
+    switch(cigar_ops_tmp.front().Type){
+        case 'M': case '=': case 'X':
+          repeat_pointer++;
+          break;
+        case 'D':
+          if (repeat_pointer >= repeat_start){
+            deletion_size += 1;
+          }
+          repeat_pointer++;
+          break;
+        case 'I': case 'S':
+          break;
+        case 'H':
+          break;
+        default:
+          printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment");
+          break;
+        }
+        if (cigar_ops_tmp.front().Length == 1)
+          cigar_ops_tmp.erase(cigar_ops_tmp.begin(), cigar_ops_tmp.begin()+1);
+        else
+          cigar_ops_tmp.front().Length--;
+  }
+  if (deletion_size >= (repeat_end - repeat_start)){
+    deleted_ = true;
+  }
+
   int rtrim = 0, qual_string_len = qualities_.size()-1;
   int32_t end_pos = end_pos_;
   while ((end_pos > max_read_stop) && cigar_ops_.size() > 0){
     // Check if we should stop trimming b/c the quality score is above the threshold
     bool qual_above_thresh = false;
-    switch(cigar_ops_.back().Type){
-    case 'M': case '=': case 'X': case 'I': case 'S':
-      qual_above_thresh = (qualities_[qual_string_len-rtrim] > min_base_qual);
-      break;
-    case 'D': case 'H':
-      break;
-    default:
-      printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment");
-      break;
-    }
+//    switch(cigar_ops_.back().Type){
+//    case 'M': case '=': case 'X': case 'I': case 'S':
+//      qual_above_thresh = (qualities_[qual_string_len-rtrim] > min_base_qual);
+//      break;
+//    case 'D': case 'H':
+//      break;
+//    default:
+//      printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment");
+//      break;
+//    }
     if (qual_above_thresh)
       break;
-
     switch(cigar_ops_.back().Type){
     case 'M': case '=': case 'X':
       rtrim++;
