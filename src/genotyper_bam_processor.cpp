@@ -49,13 +49,19 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
   for (unsigned int i = 0; i < alignments.size(); ++i){
     filt_log_p1.push_back(std::vector<double>());
     filt_log_p2.push_back(std::vector<double>());
-
     for (unsigned int j = 0; j < alignments[i].size(); ++j, ++total_reads){
-      // Trim alignment if it extends very far upstream or downstream of the STR. For tractability, we limit it to 40bp
-      alignments[i][j].TrimAlignment((region_group.start() > 200 ? region_group.start()-200 : 1), region_group.stop()+200);
-      if (alignments[i][j].Length() == 0)
+      // Trim alignment if it extends very far upstream or downstream of the STR. For tractability, we limit it to 200bp
+      alignments[i][j].TrimAlignment((region_group.start() > 35 ? region_group.start()-35 : 1), region_group.stop()+35);
+      if (alignments[i][j].Length() == 0){ // if string is deleted, add it as a deleted alignment
+        Alignment new_aln(region_group.start(), region_group.stop(), alignments[i][j].IsReverseStrand(), true, alignments[i][j].Name(), "", "", "");
+        left_alns.push_back(new_aln);
+        filt_log_p1[i].push_back(log_p1[i][j]);
+        filt_log_p2[i].push_back(log_p2[i][j]);
+        std::vector<bool> region_passes;
+        region_passes.push_back(true); // use this deleted alignment for haplotype generation
+        left_alns.back().set_hap_gen_info(region_passes);
         continue;
-
+      }
       auto iter      = seq_to_alns.find(alignments[i][j].QueryBases());
       bool have_prev = (iter != seq_to_alns.end());
       if (have_prev)
@@ -79,7 +85,7 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
         Alignment& prev_aln = left_alns[iter->second];
         assert(prev_aln.get_sequence().size() == alignments[i][j].QueryBases().size());
 	std::string bases = uppercase(alignments[i][j].QueryBases());
-        Alignment new_aln(prev_aln.get_start(), prev_aln.get_stop(), alignments[i][j].IsReverseStrand(), alignments[i][j].Name(), alignments[i][j].Qualities(), bases, prev_aln.get_alignment());
+        Alignment new_aln(prev_aln.get_start(), prev_aln.get_stop(), alignments[i][j].IsReverseStrand(), prev_aln.get_deleted(), alignments[i][j].Name(), alignments[i][j].Qualities(), bases, prev_aln.get_alignment());
         new_aln.set_cigar_list(prev_aln.get_cigar_list());
         left_alns.push_back(new_aln);
       }
@@ -226,7 +232,7 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
 
     bool run_assembly = (REQUIRE_SPANNING == 0);
     seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
-					    stutter_models, ref_vcf_, selective_logger(),skip_assembly_);
+					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_);
 
     if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
       bool pass = true;
