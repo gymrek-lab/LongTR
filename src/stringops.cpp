@@ -38,6 +38,12 @@ bool orderByLengthAndSequence(const std::string& s1, const std::string& s2){
   return s1.compare(s2) < 0;
 }
 
+bool orderByLengthAndSequencePair(const std::pair<std::string, bool>& s1, const std::pair<std::string, bool>& s2){
+  if (s1.first.size() != s2.first.size())
+    return s1.first.size() < s2.first.size();
+  return s1.first.compare(s2.first) < 0;
+}
+
 int length_suffix_match(const std::string& s1, const std::string& s2){
   auto iter_1 = s1.rbegin();
   auto iter_2 = s2.rbegin();

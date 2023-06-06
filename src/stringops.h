@@ -15,6 +15,8 @@ bool string_ends_with(const std::string& s, std::string suffix);
 
 bool orderByLengthAndSequence(const std::string& s1, const std::string& s2);
 
+bool orderByLengthAndSequencePair(const std::pair<std::string, bool>& s1, const std::pair<std::string, bool>& s2);
+
 int length_suffix_match(const std::string& s1, const std::string& s2);
 
 #endif
