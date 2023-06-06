@@ -37,9 +37,10 @@ class Alignment {
   std::string alignment_;
   std::vector<bool> use_for_haps_;
   bool rev_strand_;
+  bool deleted_ = false;
 
  public:
-   Alignment(int32_t start, int32_t stop, bool rev_strand,
+   Alignment(int32_t start, int32_t stop, bool rev_strand, bool deleted,
 	    const std::string& name,
 	    const std::string& base_qualities,
 	    const std::string& sequence,
@@ -48,6 +49,7 @@ class Alignment {
     start_      = start;
     stop_       = stop;
     rev_strand_ = rev_strand;
+    deleted_ = deleted;
   }
 
   explicit Alignment(const std::string& name)
@@ -60,6 +62,7 @@ class Alignment {
   inline const std::string& get_name()   const { return name_;   }
   inline int32_t get_start()             const { return start_;  }
   inline int32_t get_stop()              const { return stop_;   }
+  inline bool get_deleted()              const { return deleted_;   }
   inline void set_start(int32_t start)         { start_ = start; }
   inline void set_stop(int32_t stop)           { stop_  = stop;  }
 
