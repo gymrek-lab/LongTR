@@ -59,7 +59,7 @@ class BamProcessor {
  protected:
  BaseQuality base_quality_;
 
- bool bams_from_10x_; // True iff BAMs were generated from 10X GEMCODE platform
+ bool phased_bams; // True iff BAMs are phased
  bool quiet_, silent_;
  bool log_to_file_;
  NullOstream null_log_;
@@ -99,7 +99,7 @@ class BamProcessor {
    MAX_TOTAL_READS          = 1000000;
    BASE_QUAL_TRIM           = '5';
    TOO_MANY_READS           = false;
-   bams_from_10x_           = false;
+   phased_bams           = false;
  }
 
  ~BamProcessor(){
@@ -114,7 +114,7 @@ class BamProcessor {
  void use_custom_read_groups()   { use_bam_rgs_ = false;           }
  void suppress_most_logging()    { quiet_ = true; silent_ = false; }
  void suppress_all_logging()     { silent_ = true; quiet_ = false; }
- void use_10x_bam_tags()         { bams_from_10x_ = true;          }
+ void use_phased_bam_tags()         { phased_bams = true;          }
 
  void process_regions(BamCramMultiReader& reader,
 		      const std::string& region_file, const std::string& fasta_file,
