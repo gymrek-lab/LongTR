@@ -76,7 +76,7 @@ class SeqStutterGenotyper : public Genotyper {
 
   // Extract the sequences for each allele and the VCF start position
   void get_alleles(const Region& region, int block_index, const std::string& chrom_seq,
-		   int32_t& pos, std::vector<std::string>& alleles);
+		   int32_t& pos, std::vector<std::string>& alleles, std::vector<bool>& inexact_alleles);
 
   void debug_sample(int sample_index, std::ostream& logger);
   
