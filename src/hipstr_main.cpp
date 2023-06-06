@@ -138,7 +138,7 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
 
-  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 0, phased-bam = 0, skip_assembly = 0;
+  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 0, phased_bam = 0, skip_assembly = 0;
 
   static struct option long_options[] = {
     {"bams",            required_argument, 0, 'b'},
@@ -171,7 +171,7 @@ void parse_command_line_args(int argc, char** argv,
     {"filt-bam",        required_argument, 0, 'y'},
     {"viz-out",         required_argument, 0, 'z'},
     {"min-sum-qual",	required_argument, 0, 'W'},
-    {"phased-bam",           no_argument, &phased-bam, 1},
+    {"phased-bam",           no_argument, &phased_bam, 1},
     {"h",                  no_argument, &print_help, 1},
     {"help",               no_argument, &print_help, 1},
     {"lib-from-samp",      no_argument, &bam_lib_from_samp, 1},
@@ -347,7 +347,7 @@ void parse_command_line_args(int argc, char** argv,
     bam_processor.suppress_all_logging();
   if (def_stutter_model == 1)
     bam_processor.set_default_stutter_model(0.95, 0.05, 0.05, 0.95, 0.01, 0.01);
-  if (phased-bam){
+  if (phased_bam){
     bam_processor.use_phased_bam_tags();
     bam_processor.full_logger() << "Using 10X BAM tags to genotype and phase STRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
   }
