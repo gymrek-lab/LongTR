@@ -36,9 +36,10 @@ void SNPBamProcessor::process_reads(std::vector<BamAlnList>& paired_strs_by_rg,
 				    std::vector<BamAlnList>& mate_pairs_by_rg,
 				    std::vector<BamAlnList>& unpaired_strs_by_rg,
 				    const std::vector<std::string>& rg_names, const RegionGroup& region_group, const std::string& chrom_seq){
-  // Only use specialized function for 10X genomics BAMs if flag has been set
-  if (bams_from_10x_){
-    process_10x_reads(paired_strs_by_rg, mate_pairs_by_rg, unpaired_strs_by_rg, rg_names, region_group, chrom_seq);
+  // Only use specialized function for phased reads
+  if (phased_bams){
+    process_phased_reads(paired_strs_by_rg, mate_pairs_by_rg, unpaired_strs_by_rg, rg_names, region_group, chrom_seq);
+    process_phased_reads(paired_strs_by_rg, mate_pairs_by_rg, unpaired_strs_by_rg, rg_names, region_group, chrom_seq);
     return;
   }
 
@@ -138,7 +139,7 @@ int SNPBamProcessor::get_haplotype(BamAlignment& aln) const {
 ** These BAMs contain haplotype tags, which can be used in place of the physical-phasing + VCF approach
 ** used in the standard process_reads function
  */
-void SNPBamProcessor::process_10x_reads(std::vector<BamAlnList>& paired_strs_by_rg,
+void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_by_rg,
 					std::vector<BamAlnList>& mate_pairs_by_rg,
 					std::vector<BamAlnList>& unpaired_strs_by_rg,
 					const std::vector<std::string>& rg_names, const RegionGroup& region_group,
