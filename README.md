@@ -11,11 +11,11 @@ The repository is a modified version of the HipSTR tool, which was initially des
 	 --no-rmdup
 	 --use-unpaired
 	 --max-str-len      <max-str-len>    
-	 --phased-bams
+	 --phased-bam
 ```
 Usage of most of the parameters can be found in the rest of this page. Here we describe additional parameters and their usage.
 
-* **phased-bams** : For using haplotype specific bam files. Input bam file should be happlotagged first to use this option. 
+* **phased-bam** : For using haplotype specific bam files. Input bam file should be happlotagged first to use this option. 
 * **skip-assembly** : This parameter as been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions.
 * **min-sum-qual** : Threshold for quality of read which is based on Illumina 1.8 Phred+33 quality score system.
 # HipSTR
