@@ -349,7 +349,7 @@ void parse_command_line_args(int argc, char** argv,
     bam_processor.set_default_stutter_model(0.95, 0.05, 0.05, 0.95, 0.01, 0.01);
   if (phased_bam){
     bam_processor.use_phased_bam_tags();
-    bam_processor.full_logger() << "Using 10X BAM tags to genotype and phase STRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
+    bam_processor.full_logger() << "Using phased BAM tags to genotype and phase STRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
   }
   if (skip_assembly == 1){
     bam_processor.skip_assembly();
