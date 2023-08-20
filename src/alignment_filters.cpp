@@ -19,7 +19,7 @@ namespace AlignmentFilters {
     int dist = 0;
     while (iter != end){
       char type = iter->Type;
-      if (type == 'M')
+      if (type == 'M' || type == 'X' || type == '=')
 	dist += iter->Length;
       else if (type == 'I' || type == 'D')
 	return dist;
@@ -62,7 +62,7 @@ namespace AlignmentFilters {
     
     // Process CIGAR items as long as read region lies within reference sequence bounds
     while (cigar_iter != aln.CigarData().end() && ref_index < ref_seq.size() && read_index < aln.QueryBases().size()){
-      if (cigar_iter->Type == 'M'){
+      if (cigar_iter->Type == 'M' || cigar_iter->Type == '=' || cigar_iter->Type == 'X'){
 	if (ref_index + cigar_iter->Length > ref_seq.size()) 
 	  return pair<int,int>(-1, -1);
 	if (read_index + cigar_iter->Length > aln.Length())
@@ -153,6 +153,8 @@ namespace AlignmentFilters {
 	if (begin) start_index += cigar_iter->Length;
 	break;
       case 'M':
+      case '=':
+      case 'X':
 	unclipped_end += cigar_iter->Length;
 	num_bases     += cigar_iter->Length;
 	begin          = false;
