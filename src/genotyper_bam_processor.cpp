@@ -50,8 +50,10 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
     filt_log_p1.push_back(std::vector<double>());
     filt_log_p2.push_back(std::vector<double>());
     for (unsigned int j = 0; j < alignments[i].size(); ++j, ++total_reads){
+      // Discard read if it doesn't entirely overlap with the repeat
+      if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) continue;
       // Trim alignment if it extends very far upstream or downstream of the STR. For tractability, we limit it to 200bp
-      alignments[i][j].TrimAlignment((region_group.start() > 35 ? region_group.start()-35 : 1), region_group.stop()+35);
+      alignments[i][j].TrimAlignment((region_group.start() > FLANK_SIZE ? region_group.start()-FLANK_SIZE : 1), region_group.stop()+FLANK_SIZE);
       if (alignments[i][j].Length() == 0){ // if string is deleted, add it as a deleted alignment
         Alignment new_aln(region_group.start(), region_group.stop(), alignments[i][j].IsReverseStrand(), true, alignments[i][j].Name(), "", "", "");
         left_alns.push_back(new_aln);
@@ -72,11 +74,13 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
         if (alignments[i][j].MatchesReference())
           convertAlignment(alignments[i][j], chrom_seq, left_alns.back());
         else if (!realign(alignments[i][j], chrom_seq, left_alns.back())){
+
 	  // Failed to realign read
           align_fail_count++;
           left_alns.pop_back();
           continue;
 	}
+
 	seq_to_alns[alignments[i][j].QueryBases()] = left_alns.size()-1;
       }
       else {
@@ -88,8 +92,8 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
         Alignment new_aln(prev_aln.get_start(), prev_aln.get_stop(), alignments[i][j].IsReverseStrand(), prev_aln.get_deleted(), alignments[i][j].Name(), alignments[i][j].Qualities(), bases, prev_aln.get_alignment());
         new_aln.set_cigar_list(prev_aln.get_cigar_list());
         left_alns.push_back(new_aln);
+        //std::cout << "here " << left_alns.back().getCigarString() << std::endl;
       }
-
       left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
       filt_log_p1[i].push_back(log_p1[i][j]);
       filt_log_p2[i].push_back(log_p2[i][j]);

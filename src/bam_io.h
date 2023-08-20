@@ -24,6 +24,8 @@ static const char HTSLIB_INT_TO_BASE[16] = {' ', 'A', 'C', ' ',
 					    'T', ' ', ' ', ' ', 
 					    ' ', ' ', ' ', 'N'};
 
+const int FLANK_SIZE = 200;
+
 class CigarOp {
 public:
   char Type;
