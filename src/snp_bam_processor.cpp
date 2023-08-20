@@ -148,7 +148,8 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
 
   std::vector<BamAlnList> alignments(paired_strs_by_rg.size());
   std::vector< std::vector<double> > log_p1s, log_p2s;
-  int32_t phased_reads = 0, total_reads = 0;
+  int32_t phased_reads = 0, total_reads = 0, haplotype_1_reads = 0, haplotype_2_reads = 0;
+  bool not_enough_phased_reads = false;
   for (unsigned int i = 0; i < paired_strs_by_rg.size(); i++){
     // Copy alignments
     alignments[i].insert(alignments[i].end(), paired_strs_by_rg[i].begin(),   paired_strs_by_rg[i].end());
@@ -156,41 +157,68 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
 
     log_p1s.push_back(std::vector<double>());
     log_p2s.push_back(std::vector<double>());
+
     for (unsigned int j = 0; j < paired_strs_by_rg[i].size(); j++){
       total_reads++;
       int haplotype_1 = get_haplotype(paired_strs_by_rg[i][j]);
       int haplotype_2 = get_haplotype(mate_pairs_by_rg[i][j]);
+      int haplotype;
+      if (haplotype_1 != haplotype_2)
+        haplotype = -1;
+      else
+	    haplotype = haplotype_1;
+      if (haplotype != -1){
+	    if (haplotype == 1) haplotype_1_reads++;
+	    else if (haplotype == 2) haplotype_2_reads++;
+	  }
+    }
 
+    for (unsigned int j = 0; j < unpaired_strs_by_rg[i].size(); j++){
+      total_reads++;
+      int haplotype = get_haplotype(unpaired_strs_by_rg[i][j]);
+      if (haplotype != -1){
+	    if (haplotype == 1) haplotype_1_reads++;
+	    else if (haplotype == 2) haplotype_2_reads++;
+	  }
+    }
+    // check if we have enough reads from each haplotype
+    if ( ((((double)haplotype_1_reads / (double)total_reads) < 0.25) && haplotype_1_reads < 10)  || ((((double)haplotype_2_reads / (double)total_reads) < 0.25) && haplotype_2_reads < 10)){
+        not_enough_phased_reads = true;
+        selective_logger() << "Skipping phasing information as there was not enough phased reads from both haplotypes." << std::endl;
+    }
+
+    for (unsigned int j = 0; j < paired_strs_by_rg[i].size(); j++){
+      int haplotype_1 = get_haplotype(paired_strs_by_rg[i][j]);
+      int haplotype_2 = get_haplotype(mate_pairs_by_rg[i][j]);
       // If the two mate pairs don't have the same haplotype index, it's possible that
       // i)  One of them is unmapped (and therefore has a -1)
       // ii) They map to two different phase sets. This is essentially a phasing breakpoint and we
       //     probably want to avoid using phase information for these reads
       int haplotype;
       if (haplotype_1 != haplotype_2)
-	haplotype = -1;
+        haplotype = -1;
       else
-	haplotype = haplotype_1;
-      if (haplotype != -1){
-	phased_reads++;
-	log_p1s[i].push_back(haplotype == 1 ? FROM_HAP_LL : OTHER_HAP_LL);
-	log_p2s[i].push_back(haplotype == 2 ? FROM_HAP_LL : OTHER_HAP_LL);
+        haplotype = haplotype_1;
+      if (haplotype != -1 && not_enough_phased_reads == false){
+        phased_reads++;
+        log_p1s[i].push_back(haplotype == 1 ? FROM_HAP_LL : OTHER_HAP_LL);
+        log_p2s[i].push_back(haplotype == 2 ? FROM_HAP_LL : OTHER_HAP_LL);
       }
       else {
-	log_p1s[i].push_back(0.0);
-	log_p2s[i].push_back(0.0);
+        log_p1s[i].push_back(0.0);
+        log_p2s[i].push_back(0.0);
       }
     }
     for (unsigned int j = 0; j < unpaired_strs_by_rg[i].size(); j++){
-      total_reads++;
       int haplotype = get_haplotype(unpaired_strs_by_rg[i][j]);
-      if (haplotype != -1){
-	phased_reads++;
-	log_p1s[i].push_back(haplotype == 1 ? FROM_HAP_LL : OTHER_HAP_LL);
-	log_p2s[i].push_back(haplotype == 2 ? FROM_HAP_LL : OTHER_HAP_LL);
+      if (haplotype != -1 && not_enough_phased_reads == false){
+        phased_reads++;
+        log_p1s[i].push_back(haplotype == 1 ? FROM_HAP_LL : OTHER_HAP_LL);
+        log_p2s[i].push_back(haplotype == 2 ? FROM_HAP_LL : OTHER_HAP_LL);
       }
       else {
-	log_p1s[i].push_back(0.0);
-	log_p2s[i].push_back(0.0);
+        log_p1s[i].push_back(0.0);
+        log_p2s[i].push_back(0.0);
       }
     }
   }
