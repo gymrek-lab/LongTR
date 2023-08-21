@@ -26,7 +26,7 @@ class HapAligner {
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
   void align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
-			const char* seq_0, int seq_len, double& left_prob);
+			const char* seq_0, int seq_len, double& left_prob, const double* base_log_wrong, const double* base_log_correct);
 
   /**
    * Compute the log-probability of the alignment given the alignment matrices for the left and right segments.

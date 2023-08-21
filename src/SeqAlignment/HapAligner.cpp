@@ -26,7 +26,7 @@ const double MIN_SNP_LOG_PROB_CORRECT = -0.0043648054;
 
 
 void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
-				  const char* seq_0, int seq_len, double& left_prob){
+				  const char* seq_0, int seq_len, double& left_prob, const double* base_log_wrong, const double* base_log_correct){
   // NOTE: Input matrix structure: Row = Haplotype position, Column = Read index
 
 
@@ -50,35 +50,41 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   int homopolymer_len = 1;
 
-  int MISMATCH = -3;
+  float MISMATCH = -9.0;
+  float MATCH = -0.000100005;
 
-  double coefficient = 0.5;
+  //double coefficient = 0.5;
+  double coefficient = 1.0;
   for (int i = 0; i < m; ++i){
-    match_matrix_[0][i]    = (read_seq[i] == haplotype_seq[0] ? 0 : coefficient*MISMATCH) + left_prob;
+    match_matrix_[0][i]    = (read_seq[i] == haplotype_seq[0] ? MATCH : MISMATCH) + left_prob;
     insert_matrix_[0][i]   = IMPOSSIBLE;
     deletion_matrix_[0][i] = coefficient*LOG_MATCH_TO_DEL[homopolymer_len] + left_prob;
     left_prob += coefficient*LOG_DEL_TO_DEL;
   }
 
+
+
   left_prob = 0.0;
   for (int i = 0; i < n; ++i){
-    match_matrix_[i][0]    = (read_seq[0] == haplotype_seq[i] ? 0 : coefficient*MISMATCH) + left_prob;
-    insert_matrix_[i][0]   = coefficient*LOG_MATCH_TO_INS[homopolymer_len] + left_prob;
+    match_matrix_[i][0]    = (read_seq[0] == haplotype_seq[i] ? MATCH : MISMATCH) + left_prob;
+    insert_matrix_[i][0]   = MATCH + coefficient*LOG_MATCH_TO_INS[homopolymer_len] + left_prob;
     deletion_matrix_[i][0] = IMPOSSIBLE;
     left_prob += coefficient*LOG_INS_TO_INS;
   }
 
   for (int j = 1; j < n; j++){
     for (int i = 1; i < m; i++){
-	  double match_emit     = (haplotype_seq[j] == read_seq[i] ? 0 : coefficient*MISMATCH);
+
+	  double match_emit     = (haplotype_seq[j] == read_seq[i] ? MATCH : MISMATCH);
 	  match_matrix_[j][i]    = coefficient*match_emit + std::max(match_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_MATCH[homopolymer_len],
 	                                       std::max(deletion_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_DEL[homopolymer_len],
 	                                                  insert_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_INS[homopolymer_len]));
-	  insert_matrix_[j][i]   = 0 + std::max(match_matrix_[j][i-1] + coefficient*LOG_INS_TO_MATCH,
+	  insert_matrix_[j][i]   = MATCH + std::max(match_matrix_[j][i-1] + coefficient*LOG_INS_TO_MATCH,
 									insert_matrix_[j][i-1] + coefficient*LOG_INS_TO_INS);
-	  deletion_matrix_[j][i] = 0 + std::max(match_matrix_[j-1][i]  + coefficient*LOG_DEL_TO_MATCH,
+	  deletion_matrix_[j][i] = std::max(match_matrix_[j-1][i]  + coefficient*LOG_DEL_TO_MATCH,
 						   deletion_matrix_[j-1][i] + coefficient*LOG_DEL_TO_DEL);
     }
+
  }
  left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
  //std::cout << "alignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
@@ -93,6 +99,8 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     int32_t start_pos = aln.get_start() + 1;
     int32_t alignment_size = aln.get_sequence().size();
     int32_t end_pos = aln.get_stop() + 1;
+
+    //std::cout << aln.get_sequence() << " " << aln.getCigarString() << std::endl;
 
 
     int32_t rtrim = 0;
@@ -116,7 +124,7 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
             case 'H':
               break;
             default:
-              printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment 1");
+              printErrorAndDie("Invalid CIGAR option encountered in trim_alignment");
               break;
         }
         if (cigar_ops_.front().get_num() == 1)
@@ -142,7 +150,7 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
             case 'H':
               break;
             default:
-              printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment 2");
+              printErrorAndDie("Invalid CIGAR option encountered in trim_alignment");
               break;
         }
         if (cigar_ops_.front().get_num() == 1)
@@ -167,7 +175,7 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
             case 'H':
               break;
             default:
-              printErrorAndDie("Invalid CIGAR option encountered in trimAlignment 4");
+              printErrorAndDie("Invalid CIGAR option encountered in trim_alignment");
               break;
         }
         if (cigar_ops_.back().get_num() == 1)
@@ -192,7 +200,7 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
             case 'H':
               break;
             default:
-              printErrorAndDie("Invalid CIGAR option encountered in TrimAlignment 5");
+              printErrorAndDie("Invalid CIGAR option encountered in trim_alignment");
               break;
         }
         if (cigar_ops_.back().get_num() == 1)
@@ -465,16 +473,16 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
   double* base_log_correct = new double[aln.get_sequence().size()]; // log10(Prob(correct))
   const std::string& qual_string = aln.get_base_qualities();
   for (unsigned int j = 0; j < qual_string.size(); j++){
-    //base_log_wrong[j]   = base_quality->log_prob_error(qual_string[j]);
-    //base_log_correct[j] = base_quality->log_prob_correct(qual_string[j]);
-    base_log_wrong[j] = -10.5392;
-    base_log_correct[j] = -7.9436e-05;
+    base_log_wrong[j]   = base_quality->log_prob_error(qual_string[j]);
+    base_log_correct[j] = base_quality->log_prob_correct(qual_string[j]);
+//    base_log_wrong[j] = -10.5392;
+//    base_log_correct[j] = -7.9436e-05;
 }
   // Here we trim the read sequence because the flanking regions are too long for alignment to haplotypes
   std::string base_seq_str;
   trim_alignment(aln, base_seq_str);
   if (base_seq_str.size() == 0){
-        base_seq_str += fw_haplotype_->get_first_block()->get_seq(0).substr(25);
+        base_seq_str += fw_haplotype_->get_first_block()->get_seq(0).substr(fw_haplotype_->get_first_block()->get_seq(0).size() - 5, 5);
         base_seq_str += fw_haplotype_->get_last_block()->get_seq(0).substr(0,5);
     }
   int base_seq_len = (int)base_seq_str.size();
@@ -505,7 +513,7 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
     double l_prob, r_prob;
     int max_index;
 
-    align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob);
+    align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob, base_log_wrong, base_log_correct);
     double LL = l_prob;
     *prob_ptr = LL;
     prob_ptr++;
@@ -513,59 +521,6 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
 
     if (LL > max_LL){
       max_LL = LL;
-//      if (retrace_aln){
-//	std::string left_aln, right_aln, read_aln_to_hap;
-//	int fw_seed_block, fw_seed_coord, rev_seed_block, rev_seed_coord;
-//
-//	// Retrace sequence to left of seed (if appropriate)
-//	assert(max_index >= 0 && max_index < fw_haplotype_->cur_size());
-//	fw_haplotype_->get_coordinates(max_index, fw_seed_block, fw_seed_coord);
-//	if (max_index == 0)
-//	  left_aln = std::string(seed_base, 'S'); // Soft clip read to left of seed as it extends beyond haplotype. Don't retrace
-//	else {
-//	  int l_matrix_index = seed_base*max_index - 1;
-//	  if (fw_seed_coord == 0){
-//	    int prev_block_size = fw_haplotype_->get_seq(fw_seed_block-1).size();
-//	    left_aln = retrace(fw_haplotype_, base_seq, base_log_correct, seed_base, fw_seed_block-1, prev_block_size-1, l_matrix_index, l_match_matrix, l_insert_matrix, l_deletion_matrix,
-//			       l_best_artifact_size, l_best_artifact_pos, trace);
-//	  }
-//	  else
-//	    left_aln = retrace(fw_haplotype_, base_seq, base_log_correct, seed_base, fw_seed_block, fw_seed_coord-1, l_matrix_index, l_match_matrix, l_insert_matrix, l_deletion_matrix,
-//			       l_best_artifact_size, l_best_artifact_pos, trace);
-//	}
-//	std::reverse(left_aln.begin(), left_aln.end()); // Alignment is backwards for left flank
-//	assert(left_aln.size() - std::count(left_aln.begin(), left_aln.end(), 'D') == seed_base);
-//
-//	// Add the seed base to the appropriate flank's sequence
-//	if (fw_haplotype_->get_block(fw_seed_block)->get_repeat_info() == NULL){
-//	  std::string seed_base_string(1, base_seq[seed_base]);
-//	  trace.add_flank_data(fw_seed_block, seed_base_string);
-//	}
-//
-//	// Retrace sequence to right of seed (if appropriate)
-//	int rev_max_index = fw_haplotype_->cur_size()-1-max_index;
-//	assert(rev_max_index >= 0 && rev_max_index < rev_haplotype_->cur_size());
-//	rev_haplotype_->get_coordinates(rev_max_index, rev_seed_block, rev_seed_coord);
-//	if (rev_max_index == 0)
-//	  right_aln = std::string(base_seq_len-1-seed_base, 'S'); // Soft clip read to right of seed as it extends beyond haplotype. Don't retrace
-//	else {
-//	  int r_matrix_index = (base_seq_len-1-seed_base)*rev_max_index - 1;
-//	  if (rev_seed_coord == 0){
-//	    int prev_block_size = rev_haplotype_->get_seq(rev_seed_block-1).size();
-//	    right_aln = retrace(rev_haplotype_, rev_rseq.c_str(), base_log_correct+seed_base+1, base_seq_len-1-seed_base, rev_seed_block-1, prev_block_size-1, r_matrix_index, r_match_matrix,
-//				r_insert_matrix, r_deletion_matrix, r_best_artifact_size, r_best_artifact_pos, trace);
-//	  }
-//	  else
-//	    right_aln = retrace(rev_haplotype_, rev_rseq.c_str(), base_log_correct+seed_base+1, base_seq_len-1-seed_base, rev_seed_block, rev_seed_coord-1, r_matrix_index, r_match_matrix,
-//				r_insert_matrix, r_deletion_matrix, r_best_artifact_size, r_best_artifact_pos, trace);
-//	}
-//	assert(right_aln.size() - std::count(right_aln.begin(), right_aln.end(), 'D') == base_seq_len-1-seed_base);
-//
-//	read_aln_to_hap = left_aln + "M" + right_aln;
-//	trace.set_hap_aln(read_aln_to_hap);
-//	stitch_alignment_trace(fw_haplotype_->get_block(0)->start(), fw_haplotype_->get_aln_info(),
-//			       read_aln_to_hap, max_index, seed_base, aln, trace.traced_aln());
-//      }
     }
   } while (fw_haplotype_->next() && rev_haplotype_->next());
   fw_haplotype_->reset();
