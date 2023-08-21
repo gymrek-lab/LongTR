@@ -67,7 +67,7 @@ class HaplotypeGenerator {
     LEFT_PAD                 = 5;
     RIGHT_PAD                = 5;
     MIN_BLOCK_SPACING        = 10;
-    REF_FLANK_LEN            = 30;
+    REF_FLANK_LEN            = 35;
     min_aln_start_           = min_aln_start;
     max_aln_stop_            = max_aln_stop;
   }

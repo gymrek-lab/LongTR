@@ -85,7 +85,6 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
     seq = "";
     return true;
   }
-
   if (aln.get_start() >= region_start) return false;
   if (aln.get_stop()  <= region_end)   return false;
 
@@ -95,7 +94,6 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
   auto cigar_iter = aln.get_cigar_list().begin();
   // Extract region sequence if fully spanned by alignment
   std::stringstream reg_seq;
-
 
   if (aln.get_deleted() == true){ // Repeat is deleted
     seq = "";
@@ -115,25 +113,25 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
     }
     else if (pos == region_end){
       if (cigar_iter->get_type() == 'I'){
-	reg_seq << aln.get_alignment().substr(align_index, cigar_iter->get_num());
-	align_index += cigar_iter->get_num();
-	char_index = 0;
-	cigar_iter++;
+        reg_seq << aln.get_alignment().substr(align_index, cigar_iter->get_num());
+        align_index += cigar_iter->get_num();
+        char_index = 0;
+        cigar_iter++;
       }
       else {
-	if (reg_seq.str() == "")
-	  seq = "";
-	else
-	  seq = uppercase(reg_seq.str());
-	return true;
+        if (reg_seq.str() == "")
+	        seq = "";
+	    else
+	        seq = uppercase(reg_seq.str());
+	    return true;
       }
     }
     else if (pos >= region_start){
       int32_t num_bases = std::min(region_end-pos, cigar_iter->get_num()-char_index);
       switch(cigar_iter->get_type()){	 
       case 'I':
-	num_bases = cigar_iter->get_num();
-	reg_seq << aln.get_alignment().substr(align_index, num_bases);
+        num_bases = cigar_iter->get_num();
+        reg_seq << aln.get_alignment().substr(align_index, num_bases);
 	break;
       case '=': case 'X':
 	reg_seq << aln.get_alignment().substr(align_index, num_bases);
@@ -348,7 +346,6 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   }
   if (not_added_all_samples.size() > 0) {
     for (auto not_added_total:not_added_all_samples){
-        std::cerr << "Skipped reads " << not_added_total.size() << std::endl;
         not_added_total.erase(unique( not_added_total.begin(), not_added_total.end() ), not_added_total.end()); //remove duplicate elements
         std::sort(not_added_total.begin() + 1, not_added_total.end(), orderByLengthAndSequence);
         std::map<std::string, std::vector<std::string>> clusters;
@@ -382,7 +379,6 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
          for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
            //std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
            if (iter->second.size() > 9) { // only include clusters that have considerable reads.
-            std::cerr << "Added inexat haplotype of size " << iter->first.size() << std::endl;
             if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
             std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
                 sequences.push_back(std::pair<std::string,bool>(iter->first,true));

@@ -500,7 +500,7 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 			haplotype_   = new Haplotype(hap_blocks_);
 			num_alleles_ = haplotype_->num_combs();
 			call_sample_ = std::vector<std::string>(num_samples_, "");
-			haplotype_->print_block_structure(30, 100, true, logger);
+			haplotype_->print_block_structure(35, 100, true, logger);
 		}
 		else {
 			logger << "Haplotype construction failed: " << hap_generator.failure_msg() << std::endl;
