@@ -86,7 +86,7 @@ class BamProcessor {
    MIN_READ_END_MATCH       = 10;
    MAXIMAL_END_MATCH_WINDOW = 15;
    REQUIRE_SPANNING         = 0;
-   REQUIRE_PAIRED_READS     = 1;
+   REQUIRE_PAIRED_READS     = 0;
    total_bam_seek_time_     = 0;
    locus_bam_seek_time_     = -1;
    total_read_filter_time_  = 0;
