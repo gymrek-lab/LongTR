@@ -2,3 +2,5 @@
 #ignore object files
 src/*.o
 test/*
+
+src/SeqAlignment/*.o
