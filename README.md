@@ -1,10 +1,9 @@
-This repository is forked from HipSTR tool which is originally developed to genotype Short Tandem Repeats (STRs) with Illumina sequencing data. HipSTR code has been modified to get optimized for long reads. Installation process is same as original HipSTR tool. For running on long read dataset, following parameters are suggested:
+The repository is a modified version of the HipSTR tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for PacBio HiFi long reads. The installation procedure remains identical to the original HipSTR tool. When executing the tool on a PacBio HiFi dataset, following parameters are recommended:
 
 ```
 ./HipSTR --bams             long_read.bam
          --fasta            genome.fa
          --regions          str_regions.bed
-         --stutter-in       ext_long_read_error_models.txt
          --str-vcf          str_calls.vcf.gz
 	 --skip-assembly
 	 --max-flank-indel  1
@@ -12,11 +11,11 @@ This repository is forked from HipSTR tool which is originally developed to geno
 	 --no-rmdup
 	 --use-unpaired
 	 --max-str-len      <max-str-len>    
-	 --10x-bams
+	 --phased-bam
 ```
 Usage of most of the parameters can be found in the rest of this page. Here we describe additional parameters and their usage.
 
-* **10x-bams** : For using haplotype specific bam files. Input bam file should be happlotagged first to use this option. 
+* **phased-bam** : For using haplotype specific bam files. Input bam file should be happlotagged first to use this option. 
 * **skip-assembly** : This parameter as been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions.
 * **min-sum-qual** : Threshold for quality of read which is based on Illumina 1.8 Phred+33 quality score system.
 # HipSTR
