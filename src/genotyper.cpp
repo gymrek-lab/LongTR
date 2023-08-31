@@ -53,62 +53,35 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
     double* sample_LL_ptr = log_sample_posteriors_ + num_diplotypes*sample_label_[read_index];
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-        //*sample_LL_ptr += read_weights[read_index]*fast_log_sum_exp(LOG_ONE_HALF + log_p1_[read_index] + read_LL_ptr[index_1],
-		//						    LOG_ONE_HALF + log_p2_[read_index] + read_LL_ptr[index_2]);
-
         if (read_LL_ptr[index_1] < -600 || read_LL_ptr[index_2] < -600){
             *sample_LL_ptr += std::max(read_LL_ptr[index_1], read_LL_ptr[index_2]);
         }
         else{
-            //std::cout << read_LL_ptr[index_1] << " " << read_LL_ptr[index_2] << " " << log_p1_[read_index] << " " << log_p2_[read_index] << std::endl;
-            *sample_LL_ptr += log(exp(read_LL_ptr[index_1] + log_p1_[read_index]) + exp(read_LL_ptr[index_2] + log_p2_[read_index]));
-             }//TODO make this fast
+            *sample_LL_ptr += log(exp(read_LL_ptr[index_1] + log_p1_[read_index] + LOG_ONE_HALF) + exp(read_LL_ptr[index_2] + log_p2_[read_index] + LOG_ONE_HALF));
+            //if (index_1 == 1 && index_2 == 1){
+              //  std::cout << sample_LL_ptr << " " << read_index << " " << read_LL_ptr[index_1] << " " << read_LL_ptr[index_2] << " " << *sample_LL_ptr << std::endl;}
+        }//TODO make this fast
         //assert(*sample_LL_ptr <= TOLERANCE);
       }
     }
     read_LL_ptr += num_alleles_;
   }
 
+  //Compute each sample's total LL and normalize each genotype LL to generate valid log posteriors
 
-// The code below was intended for debug
-
-//double ps[num_alleles_ * num_alleles_];
-//double ps2[num_alleles_ * num_alleles_];
-//double* read_LL_ptr_     = log_aln_probs_;
-//for (int read_index = 0; read_index < num_reads_; ++read_index){
-//  int allele_index  = 0;
-//  for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
-//    for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++allele_index){
-//        ps[allele_index] += log(exp(read_LL_ptr_[index_1]) + exp(read_LL_ptr_[index_2]));
-//        ps2[allele_index] += fast_log_sum_exp(read_LL_ptr_[index_1], read_LL_ptr_[index_2]);
-//      }
-//    }
-//   read_LL_ptr_ += num_alleles_;
-//  }
-//
-//int allele_index = 0;
-//for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
-//    for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++allele_index){
-//        std::cout << index_1 << " " << index_2 << " " << ps[allele_index] << " " << ps2[allele_index] << std::endl;
-//     }
-//   }
-
-
-
-  // Compute each sample's total LL and normalize each genotype LL to generate valid log posteriors
-//  double* sample_LL_ptr = log_sample_posteriors_;
-//  for (int sample_index = 0; sample_index < num_samples_; ++sample_index){
-//    //const double sample_total_LL = log_sum_exp(sample_LL_ptr, sample_LL_ptr+num_diplotypes);
-//    double sample_total_LL = 0.0;
-//    for(double* it = sample_LL_ptr; it != sample_LL_ptr+num_diplotypes; ++it)
-//     sample_total_LL += *it;
-//    sample_total_LLs_[sample_index] = sample_total_LL;
-//    //assert(sample_total_LL <= TOLERANCE);
-//    for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
-//      for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-//	*sample_LL_ptr -= sample_total_LL;
-//	}
-//  }
+  double* sample_LL_ptr = log_sample_posteriors_;
+  //std::cout << num_diplotypes << " " << *sample_LL_ptr << " " << *(sample_LL_ptr+num_diplotypes) << std::endl;
+  for (int sample_index = 0; sample_index < num_samples_; ++sample_index){
+    const double sample_total_LL = log_sum_exp(sample_LL_ptr, sample_LL_ptr+num_diplotypes);
+    sample_total_LLs_[sample_index] = sample_total_LL;
+    //assert(sample_total_LL <= TOLERANCE);
+    for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
+      for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
+      //std::cout << "before " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
+	*sample_LL_ptr -= sample_total_LL;
+	//std::cout << "final " << *sample_LL_ptr << std::endl;
+	}
+  }
 
   // Compute the total log-likelihood given the current parameters
   double total_LL = sum(sample_total_LLs_, sample_total_LLs_ + num_samples_);
@@ -126,6 +99,7 @@ void Genotyper::get_optimal_haplotypes(std::vector< std::pair<int, int> >& gts) 
   for (unsigned int sample_index = 0; sample_index < num_samples_; ++sample_index){
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++log_posterior_ptr){
+        //std::cout << index_1 << " " << index_2 << " " << *log_posterior_ptr << std::endl;
         if (*log_posterior_ptr > log_phased_posteriors[sample_index]){
           log_phased_posteriors[sample_index] = *log_posterior_ptr;
           gts[sample_index] = std::pair<int,int>(index_1, index_2);
@@ -305,6 +279,7 @@ std::string Genotyper::get_vcf_header(const std::string& fasta_path, const std::
       << "##INFO=<ID=" << "OUTFRAME_PGEOM" << ",Number=1,Type=Float,Description=\""   << "Parameter for out-of-frame geometric step size distribution"                  << "\">\n"
       << "##INFO=<ID=" << "OUTFRAME_UP"    << ",Number=1,Type=Float,Description=\""   << "Probability that stutter causes an out-of-frame increase in read's STR size"  << "\">\n"
       << "##INFO=<ID=" << "OUTFRAME_DOWN"  << ",Number=1,Type=Float,Description=\""   << "Probability that stutter causes an out-of-frame decrease in read's STR size"  << "\">\n"
+      << "##INFO=<ID=" << "INEXACT_ALLELE" << ",Number=A,Type=Integer,Description=\""   << "Boolean showing if each alternate allele is exact or approximated by POA, 0 for exact 1 for approximated."  << "\">\n"
       << "##INFO=<ID=" << "BPDIFFS"        << ",Number=A,Type=Integer,Description=\"" << "Base pair difference of each alternate allele from the reference allele"      << "\">\n"
       << "##INFO=<ID=" << "START"          << ",Number=1,Type=Integer,Description=\"" << "Inclusive start coodinate for the repetitive portion of the reference allele" << "\">\n"
       << "##INFO=<ID=" << "END"            << ",Number=1,Type=Integer,Description=\"" << "Inclusive end coordinate for the repetitive portion of the reference allele"  << "\">\n"

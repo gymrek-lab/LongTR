@@ -110,6 +110,7 @@ public:
     MIN_TOTAL_READS        = 100;
     MAX_TOTAL_HAPLOTYPES   = 1000;
     MAX_FLANK_HAPLOTYPES   = 4;
+    INDEL_FLANK_LEN        = 5;
     MIN_FLANK_FREQ         = 0.01;
     VIZ_LEFT_ALNS          = 0;
     total_stutter_time_    = 0;
@@ -250,6 +251,8 @@ public:
 
   // If this flag is set, HTML alignments are written for both the haplotype alignments and Needleman-Wunsch left alignments
   int VIZ_LEFT_ALNS;
+
+  int INDEL_FLANK_LEN;
 };
 
 #endif

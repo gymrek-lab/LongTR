@@ -311,7 +311,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
 
   // Identify additional alleles satisfying thresholds
   for (auto iter = sample_counts.begin(); iter != sample_counts.end(); iter++){
-    if (iter->second > MIN_FRAC_SAMPLES*tot_samples || read_counts[iter->first] > MIN_FRAC_READS*tot_reads){
+    if (iter->second > MIN_FRAC_SAMPLES*tot_samples*2 || read_counts[iter->first] > MIN_FRAC_READS*tot_reads*2){
       sequences.push_back(std::pair<std::string,bool>(iter->first,false));
       if (ref_index == -1 && (iter->first.compare(ref_seq) == 0))
 	ref_index = sequences.size()-1;
@@ -486,9 +486,9 @@ bool HaplotypeGenerator::add_haplotype_block(const Region& region, const std::st
 
   // Add the new haplotype block
   hap_blocks_.push_back(new RepeatBlock(region_start, region_end, sequences.front().first, stutter_model->period(), stutter_model));
-  for (unsigned int i = 1; i < sequences.size(); i++){
+  for (unsigned int i = 1; i < sequences.size(); i++)
     hap_blocks_.back()->add_alternate(sequences[i]);
-    }
+
   return true;
 }
 

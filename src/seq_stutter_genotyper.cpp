@@ -466,7 +466,6 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 			if (alns_[read_index].use_for_hap_generation(region_index))
 				gen_hap_alns[sample_label_[read_index]].push_back(alns_[read_index]);
 
-
 		std::vector<std::string> vcf_alleles;
 		if (ref_vcf_ != NULL){
 			int32_t pos;
@@ -498,7 +497,7 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 			// Copy over the constructed haplotype blocks and build the haplotype
 			hap_blocks_  = hap_generator.get_haplotype_blocks();
 			haplotype_   = new Haplotype(hap_blocks_);
-			num_alleles_ = haplotype_->num_combs();
+ 			num_alleles_ = haplotype_->num_combs();
 			call_sample_ = std::vector<std::string>(num_samples_, "");
 			haplotype_->print_block_structure(35, 100, true, logger);
 		}

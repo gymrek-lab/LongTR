@@ -92,7 +92,6 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
         Alignment new_aln(prev_aln.get_start(), prev_aln.get_stop(), alignments[i][j].IsReverseStrand(), prev_aln.get_deleted(), alignments[i][j].Name(), alignments[i][j].Qualities(), bases, prev_aln.get_alignment());
         new_aln.set_cigar_list(prev_aln.get_cigar_list());
         left_alns.push_back(new_aln);
-        //std::cout << "here " << left_alns.back().getCigarString() << std::endl;
       }
       left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
       filt_log_p1[i].push_back(log_p1[i][j]);
@@ -233,7 +232,6 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
     std::vector< std::vector<double> > filt_log_p1s, filt_log_p2s;
     left_align_reads(region_group, chrom_seq, alignments, log_p1s, log_p2s, filt_log_p1s,
 		     filt_log_p2s, left_alignments);
-
     bool run_assembly = (REQUIRE_SPANNING == 0);
     seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
 					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_);

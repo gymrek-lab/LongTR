@@ -37,11 +37,12 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   left_prob = 0.0;
   char first_hap_base = haplotype->get_first_char();
   std::string read_seq = seq_0;
-  if (haplotype->get_seq().size() <= 50){ //TODO, it usually happens in case of big deletions
+  if (haplotype->get_seq().size() <= 60){ //TODO, it usually happens in case of big deletions
     left_prob = IMPOSSIBLE;
     return;
   }
-  std::string haplotype_seq = haplotype->get_seq().substr(25, haplotype->get_seq().size() - 50);
+  int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
+  std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - 5, haplotype->get_seq().size() - (REF_FLANK_LEN - 5)*2);
   int n = haplotype_seq.size();
   int m = read_seq.size();
   double match_matrix_[n][m];
@@ -87,7 +88,7 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
  }
  left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
- //std::cout << "alignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
+ //std::cout << "alignment of sequence with size " << read_seq << " to haplotype with size " << haplotype_seq << " with l_prob " << left_prob << std::endl;
 }
 
 
@@ -99,10 +100,6 @@ void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     int32_t start_pos = aln.get_start() + 1;
     int32_t alignment_size = aln.get_sequence().size();
     int32_t end_pos = aln.get_stop() + 1;
-
-    //std::cout << aln.get_sequence() << " " << aln.getCigarString() << std::endl;
-
-
     int32_t rtrim = 0;
     int32_t ltrim = 0;
 

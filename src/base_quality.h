@@ -28,12 +28,12 @@ class BaseQuality {
  public:
   BaseQuality(){
     // Precalculate log likelihoods
-    log_correct_[0] = -100000;
-    log_error_[0]   = -LOG_3;
+    log_correct_[0] = -100;
+    log_error_[0]   = 0;
 
     for (int i = 1; i <= MAX_QUAL_INDEX; ++i){
       log_correct_[i] = log(1.0 - pow(10.0, i/(-10.0)));
-      log_error_[i]   = log(pow(10.0, i/(-10.0))/3.0);
+      log_error_[i]   = log(pow(10.0, i/(-10.0)/5.0));
     }
   }
 

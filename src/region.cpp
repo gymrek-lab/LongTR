@@ -32,7 +32,7 @@ void readRegions(const std::string& input_file, uint32_t max_regions, const std:
     if (start < 1)      printErrorAndDie("Improperly formatted region file. \n Region has a START < 1, but START must be >= 1\n Bad line: " + line);
     if (stop <= start)  printErrorAndDie("Improperly formatted region file. \n Region has a STOP <= START. Bad line: " + line);
     if (period < 1)     printErrorAndDie("Improperly formatted region file. \n Region has a PERIOD < 1. Bad line: " + line);
-    if (period > 9)     printErrorAndDie("Improperly formatted region file. \n Region has a PERIOD > 9. Bad line: " + line);
+    //if (period > 9)     printErrorAndDie("Improperly formatted region file. \n Region has a PERIOD > 9. Bad line: " + line);
 
     if (!chrom_limit.empty() && chrom.compare(chrom_limit) != 0)
       continue;
