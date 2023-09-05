@@ -227,7 +227,7 @@ public:
 		  << " BAM seek time       = " << total_bam_seek_time()       << " seconds\n"
 		  << " Read filtering      = " << total_read_filter_time()    << " seconds\n"
 		  << " SNP info extraction = " << total_snp_phase_info_time() << " seconds\n"
-		  << " Stutter estimation  = " << total_stutter_time()        << " seconds\n"
+		  //<< " Stutter estimation  = " << total_stutter_time()        << " seconds\n"
 		  << " Genotyping          = " << total_genotype_time()       << " seconds\n";
 
     full_logger() << "\t" << " Left alignment        = "  << process_timer_.get_total_time("Left alignment")        << " seconds\n"
@@ -245,14 +245,15 @@ public:
   int32_t MIN_TOTAL_READS;  // Minimum total reads required to genotype locus
 
   int MAX_TOTAL_HAPLOTYPES;
+  int INDEL_FLANK_LEN;
+
+
   int MAX_FLANK_HAPLOTYPES;
   double MIN_FLANK_FREQ;    // Minimum fraction of samples that must have an alternate flank to consider it
                             // Samples with flanks below this frequency will not be genotyped
 
   // If this flag is set, HTML alignments are written for both the haplotype alignments and Needleman-Wunsch left alignments
   int VIZ_LEFT_ALNS;
-
-  int INDEL_FLANK_LEN;
 };
 
 #endif

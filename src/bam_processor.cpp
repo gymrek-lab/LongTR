@@ -443,8 +443,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
   selective_logger() << "\n\t" << unique_mapping << " did not have a unique mapping";
   if (REQUIRE_PAIRED_READS)
     selective_logger() << "\n\t" << num_filt_unpaired_reads << " did not have a mate pair";
-  selective_logger() << "\n\t" << (paired_str_alns.size()+unpaired_str_alns.size()) << " PASSED ALL FILTERS" << "\n"
-		     << "Found " << paired_str_alns.size() << " fully paired reads and " << unpaired_str_alns.size() << " unpaired reads for downstream analyses" << std::endl;
+  selective_logger() << "\n\t" << (paired_str_alns.size()+unpaired_str_alns.size()) << " PASSED ALL FILTERS"  << std::endl;
     
   // Separate the reads based on their associated read groups
   std::map<std::string, int> rg_indices;

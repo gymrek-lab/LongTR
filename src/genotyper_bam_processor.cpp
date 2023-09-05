@@ -200,7 +200,6 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
   for (auto region_iter = regions.begin(); region_iter != regions.end(); region_iter++){
     StutterModel* stutter_model = NULL;
     if (def_stutter_model_ != NULL){
-      selective_logger() << "Using default stutter model" << std::endl;
       stutter_model = def_stutter_model_->copy();
       stutter_model->set_period(region_iter->period());
     }
@@ -233,9 +232,9 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
     left_align_reads(region_group, chrom_seq, alignments, log_p1s, log_p2s, filt_log_p1s,
 		     filt_log_p2s, left_alignments);
     bool run_assembly = (REQUIRE_SPANNING == 0);
-    seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
-					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_);
 
+    seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
+					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN);
     if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
       bool pass = true;
 

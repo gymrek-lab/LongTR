@@ -219,10 +219,10 @@ void Haplotype::print_block_structure(int max_ref_len, int max_other_len, bool i
       int num_chars  = 0;
       if (n < blocks_[i]->num_options()){
 	num_chars = blocks_[i]->get_seq(n).size();
+	n_inexact += blocks_[i]->get_inexact(n);
 	if (num_chars > char_limit){
 	  int v1 = char_limit/2;
 	  int v2 = char_limit - v1 - 3;
-	  n_inexact += blocks_[i]->get_inexact(n);
 	  out << blocks_[i]->get_seq(n).substr(0, v1) << "..." << blocks_[i]->get_seq(n).substr(blocks_[i]->get_seq(n).size()-v2, v2);
 	  num_chars = char_limit;
 	}

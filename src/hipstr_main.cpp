@@ -30,21 +30,21 @@ bool is_file(const std::string& name){
 }
 
 void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len){
-  std::cerr << "Usage: HipSTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --str-vcf <str_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
+  std::cerr << "Usage: HipSTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --tr-vcf <tr_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
     
 	    << "Required parameters:" << "\n"
 	    << "\t" << "--bams          <list_of_bams>        "  << "\t" << "Comma separated list of BAM/CRAM files. Either --bams or --bam-files must be specified"   << "\n"
 	    << "\t" << "--fasta         <genome.fa>           "  << "\t" << "FASTA file containing all of the relevant sequences for your organism   "                 << "\n"
 	    << "\t" << "                                      "  << "\t" << "  When analyzing CRAMs, this FASTA file must match the file used for compression"         << "\n"
-	    << "\t" << "--regions       <region_file.bed>     "  << "\t" << "BED file containing coordinates for each STR region"                                      << "\n"
-	    << "\t" << "--str-vcf       <str_gts.vcf.gz>      "  << "\t" << "Bgzipped VCF file to which STR genotypes will be written"                                 << "\n" << "\n"
+	    << "\t" << "--regions       <region_file.bed>     "  << "\t" << "BED file containing coordinates for each TR region"                                      << "\n"
+	    << "\t" << "--tr-vcf       <tr_gts.vcf.gz>      "  << "\t" << "Bgzipped VCF file to which TR genotypes will be written"                                 << "\n" << "\n"
 
 	    << "Optional input parameters:" << "\n"
 	    << "\t" << "--bam-files  <bam_files.txt>          "  << "\t" << "File containing BAM/CRAM files to analyze, one per line "                              << "\n"
-	    << "\t" << "--ref-vcf    <str_ref_panel.vcf.gz>   "  << "\t" << "Bgzipped input VCF file of a reference panel of STR genotypes. VCF alleles will be"    << "\n"
+	    << "\t" << "--ref-vcf    <tr_ref_panel.vcf.gz>   "  << "\t" << "Bgzipped input VCF file of a reference panel of TR genotypes. VCF alleles will be"    << "\n"
 	    << "\t" << "                                      "  << "\t" << " used as candidate variants instead of finding candidates in the BAMs/CRAMs (Default)" << "\n"
 	    << "\t" << "--snp-vcf    <phased_snps.vcf.gz>     "  << "\t" << "Bgzipped input VCF file containing phased SNP genotypes for the samples"               << "\n"
-	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase STRs "                   << "\n"
+	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
 	    //<< "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
     
 	    << "Optional output parameters:" << "\n"
@@ -83,9 +83,9 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "                                      "  << "\t" << "  each read must have an RG tag and the library is determined from the LB field"     << "\n" << "\n"
 
 	    << "Optional haplotype filtering parameters:" << "\n"
-	    << "\t" << "--max-haps <max_haplotypes>           "  << "\t" << "Maximum allowable candidate haplotypes for an STR (Default = " << def_max_haplotypes << ")" << "\n"
+	    << "\t" << "--max-haps <max_haplotypes>           "  << "\t" << "Maximum allowable candidate haplotypes for an TR (Default = " << def_max_haplotypes << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate haplotypes will not be genotyped" << "\n"
-	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an STR (Default = " << def_max_flanks << ")" << "\n"
+	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
 	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
 
@@ -96,22 +96,21 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--silent                              "  << "\t" << "Don't output any logging messages  (Default = output all messages)"                   << "\n"
 	    //<< "\t" << "--def-stutter-model                   "  << "\t" << "For each locus, use a stutter model with PGEOM=0.9 and UP=DOWN=0.05 for in-frame"     << "\n"
 	    //<< "\t" << "                                      "  << "\t" << " artifacts and PGEOM=0.9 and UP=DOWN=0.01 for out-of-frame artifacts"                 << "\n"
-	    << "\t" << "--chrom              <chrom>          "  << "\t" << "Only consider STRs on this chromosome"                                                << "\n"
+	    << "\t" << "--chrom              <chrom>          "  << "\t" << "Only consider TRs on this chromosome"                                                << "\n"
 	    << "\t" << "--haploid-chrs       <list_of_chroms> "  << "\t" << "Comma separated list of chromosomes to treat as haploid (Default = all diploid)"      << "\n"
 	    << "\t" << "--hap-chr-file       <hap_chroms.txt> "  << "\t" << "File containing chromosomes to treat as haploid, one per line"                        << "\n"
 	    << "\t" << "--min-reads          <num_reads>      "  << "\t" << "Minimum total reads required to genotype a locus (Default = " << def_min_reads << ")" << "\n"
 	    << "\t" << "--max-reads          <num_reads>      "  << "\t" << "Skip a locus if it has more than NUM_READS reads (Default = " << def_max_reads << ")" << "\n"
-	    << "\t" << "--max-str-len        <max_bp>         "  << "\t" << "Only genotype STRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
+	    << "\t" << "--max-tr-len        <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
     //<< "\t" << "--skip-genotyping                     "  << "\t" << "Don't perform any STR genotyping and merely compute the stutter model for each STR"  << "\n"
     //<< "\t" << "--dont-use-all-reads                  "  << "\t" << "Only utilize the reads HipSTR thinks will be informative for genotyping"   << "\n"
     //<< "\t" << "                                      "  << "\t" << " Enabling this option usually slightly decreases accuracy but shortens runtimes (~2x)"      << "\n"
     //<< "\t" << "--read-qual-trim     <min_qual>       "  << "\t" << "Trim both ends of a read until a base has quality score > MIN_QUAL (Default = 5)"    << "\n"
 	    << "\t" << "--fam <fam_file>                      "  << "\t" << "FAM file containing pedigree information for samples of interest. Use the pedigree"  << "\n"
-            << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing STRs (Default = use all SNPs)"         << "\n"
+            << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing TRs (Default = use all SNPs)"         << "\n"
 	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
 	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
-	    << "\t" << "--InDel-flank-len     <max_bp>        "  << "\t" << "Report any InDel in max_bp base pair around repeat as an InDel affecting repeat size" << "\n"
-	        << "\t" << "                                      "  << "\t" << "  (Default = " << def_indel_flank_len << ")" << "\n" << std::endl;
+	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n" << std::endl;
 //	    << "\n" << "\n"
 //	    << "*** Looking for answers to commonly asked questions or usage examples? ***"                     << "\n"
 //	    << "\t i.  An in-depth description of HipSTR is available at https://hipstr-tool.github.io/HipSTR"  << "\n"
@@ -160,7 +159,7 @@ void parse_command_line_args(int argc, char** argv,
     {"log",             required_argument, 0, 'l'},
     {"max-reads",       required_argument, 0, 'n'},
     {"max-flank-indel", required_argument, 0, 'F'},
-    {"str-vcf",         required_argument, 0, 'o'},
+    {"tr-vcf",         required_argument, 0, 'o'},
     {"ref-vcf",         required_argument, 0, 'p'},
     {"regions",         required_argument, 0, 'r'},
     {"snp-vcf",         required_argument, 0, 'v'},
@@ -170,7 +169,7 @@ void parse_command_line_args(int argc, char** argv,
     {"haploid-chrs",    required_argument, 0, 't'},
     {"hap-chr-file",    required_argument, 0, 'u'},
     {"pass-bam",        required_argument, 0, 'w'},
-    {"max-str-len",     required_argument, 0, 'x'},
+    {"max-tr-len",     required_argument, 0, 'x'},
     {"filt-bam",        required_argument, 0, 'y'},
     {"viz-out",         required_argument, 0, 'z'},
     {"min-sum-qual",	required_argument, 0, 'W'},
@@ -194,14 +193,14 @@ void parse_command_line_args(int argc, char** argv,
     {"silent",             no_argument, &silent_log, 1},
     {"skip-genotyping",    no_argument, &skip_genotyping, 1},
     {"skip-assembly",	   no_argument, &skip_assembly, 1},
-    {"InDel-flank-len",    no_argument, &indel_flank_len, 5},
+    {"indel-flank-len",    required_argument, 0, 'L'},
     {0, 0, 0, 0}
   };
 
   std::string filename;
   while (true){
     int option_index = 0;
-    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:L:", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -319,6 +318,9 @@ void parse_command_line_args(int argc, char** argv,
     case 'W':
 	bam_processor.MIN_SUM_QUAL_LOG_PROB = atof(optarg);
 	break;
+	case 'L':
+	bam_processor.INDEL_FLANK_LEN = atof(optarg);
+	break;
     case '?':
       printErrorAndDie("Unrecognized command line option");
       break;
@@ -353,7 +355,7 @@ void parse_command_line_args(int argc, char** argv,
     bam_processor.set_default_stutter_model(0.95, 0.05, 0.05, 0.95, 0.01, 0.01);
   if (phased_bam){
     bam_processor.use_phased_bam_tags();
-    bam_processor.full_logger() << "Using phased BAM tags to genotype and phase STRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
+    bam_processor.full_logger() << "Using phased BAM tags to genotype and phase TRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
   }
   if (skip_assembly == 1){
     bam_processor.skip_assembly();
@@ -397,7 +399,7 @@ int main(int argc, char** argv){
   else if (fasta_file.empty())
     printErrorAndDie("--fasta option required");
   else if (!skip_genotyping && str_vcf_out_file.empty())
-    printErrorAndDie("--str-vcf option required");
+    printErrorAndDie("--tr-vcf option required");
 
   // Check that the FASTA file exists
   if (!file_exists(fasta_file) || !is_file(fasta_file))
@@ -524,7 +526,7 @@ int main(int argc, char** argv){
 
   if (!skip_genotyping){
     if (!string_ends_with(str_vcf_out_file, ".gz"))
-      printErrorAndDie("Path for STR VCF output file must end in .gz as it will be bgzipped");
+      printErrorAndDie("Path for TR VCF output file must end in .gz as it will be bgzipped");
     bam_processor.set_output_str_vcf(str_vcf_out_file, fasta_file, full_command, rg_samples);
   }
 

@@ -27,6 +27,7 @@
 class SeqStutterGenotyper : public Genotyper {
  private:
   int MAX_REF_FLANK_LEN;
+
   double STRAND_TOLERANCE;
 
   BaseQuality base_quality_;
@@ -134,7 +135,7 @@ class SeqStutterGenotyper : public Genotyper {
 
   RegionGroup* region_group_;
   bool skip_assembly;
-
+  int INDEL_FLANK_LEN;
 
   // Private unimplemented copy constructor and assignment operator to prevent operations
   SeqStutterGenotyper(const SeqStutterGenotyper& other);
@@ -144,7 +145,7 @@ class SeqStutterGenotyper : public Genotyper {
   SeqStutterGenotyper(const RegionGroup& region_group, bool haploid, bool reassemble_flanks,
 		      std::vector<Alignment>& alignments, std::vector< std::vector<double> >& log_p1, std::vector< std::vector<double> >& log_p2,
 		      const std::vector<std::string>& sample_names, const std::string& chrom_seq,
-		      std::vector<StutterModel*>& stutter_models, VCF::VCFReader* ref_vcf, std::ostream& logger, bool skip_assembly_): Genotyper(haploid, sample_names, log_p1, log_p2){
+		      std::vector<StutterModel*>& stutter_models, VCF::VCFReader* ref_vcf, std::ostream& logger, bool skip_assembly_, int INDEL_FLANK_LEN_): Genotyper(haploid, sample_names, log_p1, log_p2){
     region_group_          = region_group.copy();
     alns_                  = alignments;
     seed_positions_        = NULL;
@@ -160,6 +161,7 @@ class SeqStutterGenotyper : public Genotyper {
     reassemble_flanks_     = reassemble_flanks;
     total_hap_build_time_  = total_hap_aln_time_  = 0;
     total_aln_trace_time_  = total_assembly_time_ = 0;
+    INDEL_FLANK_LEN = INDEL_FLANK_LEN_;
     ref_vcf_               = ref_vcf;
     assert(num_reads_ == alns_.size());
     init(stutter_models, chrom_seq, logger);

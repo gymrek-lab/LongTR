@@ -22,7 +22,7 @@ class HaplotypeGenerator {
   double MIN_STRONG_SAMPLES;
 
   // When extracting alleles in regions, we pad by these amounts to improve the capture of proximal indels
-  int32_t LEFT_PAD, RIGHT_PAD;
+  int LEFT_PAD, RIGHT_PAD;
 
   int32_t MIN_BLOCK_SPACING; // Minimum distance (bp) between variant haplotype blocks
   int32_t REF_FLANK_LEN;     // Maximum length of reference sequences flanking the variant haplotype blocks
@@ -57,15 +57,15 @@ class HaplotypeGenerator {
   HaplotypeGenerator& operator=(const HaplotypeGenerator& other);
 
  public:
-  HaplotypeGenerator(int32_t min_aln_start, int32_t max_aln_stop){
+  HaplotypeGenerator(int32_t min_aln_start, int32_t max_aln_stop, int INDEL_FLANK_LEN_){
     finished_                = false;
     MIN_FRAC_READS           = 0.05;
     MIN_FRAC_SAMPLES         = 0.05;
     MIN_FRAC_STRONG_SAMPLE   = 0.2;
     MIN_READS_STRONG_SAMPLE  = 2;
     MIN_STRONG_SAMPLES       = 1;
-    LEFT_PAD                 = 5;
-    RIGHT_PAD                = 5;
+    LEFT_PAD                 = INDEL_FLANK_LEN_;
+    RIGHT_PAD                = INDEL_FLANK_LEN_;
     MIN_BLOCK_SPACING        = 10;
     REF_FLANK_LEN            = 35;
     min_aln_start_           = min_aln_start;

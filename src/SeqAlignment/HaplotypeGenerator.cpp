@@ -128,7 +128,7 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
     }
     else if (pos >= region_start){
       int32_t num_bases = std::min(region_end-pos, cigar_iter->get_num()-char_index);
-      switch(cigar_iter->get_type()){	 
+      switch(cigar_iter->get_type()){
       case 'I':
         num_bases = cigar_iter->get_num();
         reg_seq << aln.get_alignment().substr(align_index, num_bases);
@@ -269,6 +269,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       }
     }
 
+
     // Identify alleles strongly supported by sample
     for (auto iter = counts.begin(); iter != counts.end(); iter++){
       if (iter->second >= MIN_READS_STRONG_SAMPLE && iter->second >= MIN_FRAC_STRONG_SAMPLE*samp_reads)
@@ -317,7 +318,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
 	ref_index = sequences.size()-1;
     }
   }
-  
+
   // Arrange reference sequence as first element
   if (ref_index == -1)
     sequences.insert(sequences.begin(), std::pair<std::string,bool>(ref_seq,false));
@@ -327,7 +328,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   }
 
   // Identify how many alignments don't have a candidate haplotype:
-  std::vector<std::vector<std::string>> not_added_all_samples;
+  std::vector<std::pair<std::vector<std::string>, int>> not_added_all_samples;
   for (unsigned int i = 0; i < alignments.size(); i++){
     std::vector<std::string> not_added_sample;
     int samp_reads = 0;
@@ -341,11 +342,12 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       }
     }
     if (not_added_sample.size() > samp_reads*0.25){ // TODO make it a constant
-      not_added_all_samples.push_back(not_added_sample);
+      not_added_all_samples.push_back(std::pair<std::vector<std::string>, int>(not_added_sample, samp_reads));
     }
   }
   if (not_added_all_samples.size() > 0) {
-    for (auto not_added_total:not_added_all_samples){
+    for (auto not_added_total_pair:not_added_all_samples){
+        std::vector<std::string> not_added_total = not_added_total_pair.first;
         not_added_total.erase(unique( not_added_total.begin(), not_added_total.end() ), not_added_total.end()); //remove duplicate elements
         std::sort(not_added_total.begin() + 1, not_added_total.end(), orderByLengthAndSequence);
         std::map<std::string, std::vector<std::string>> clusters;
@@ -378,7 +380,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
          // Add centroids of refined clusters to haplotype sequences
          for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
            //std::cout << "consensus sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
-           if (iter->second.size() > 9) { // only include clusters that have considerable reads.
+           if (iter->second.size() > std::min((int)(not_added_total_pair.second*0.20), 10)) { // only include clusters that have considerable reads.
             if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
             std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
                 sequences.push_back(std::pair<std::string,bool>(iter->first,true));

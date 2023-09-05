@@ -18,6 +18,7 @@ class HapAligner {
   std::vector<HapBlock*> rev_blocks_;
   std::vector<int32_t> repeat_starts_;
   std::vector<int32_t> repeat_ends_;
+  int INDEL_FLANK_LEN;
 
   /**
    * Align the sequence contained in SEQ_0 -> SEQ_N using the recursion
@@ -59,11 +60,12 @@ class HapAligner {
   HapAligner& operator=(const HapAligner& other);
 
  public:
-  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype){
+  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype, int INDEL_FLANK_LEN_){
     assert(realign_to_haplotype.size() == haplotype->num_combs());
     fw_haplotype_   = haplotype;
     rev_haplotype_  = haplotype->reverse(rev_blocks_);
     realign_to_hap_ = realign_to_haplotype;
+    INDEL_FLANK_LEN = INDEL_FLANK_LEN_;
 
     for (int i = 0; i < fw_haplotype_->num_blocks(); i++){
       HapBlock* block = fw_haplotype_->get_block(i);

@@ -42,7 +42,7 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
     return;
   }
   int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
-  std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - 5, haplotype->get_seq().size() - (REF_FLANK_LEN - 5)*2);
+  std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
   int n = haplotype_seq.size();
   int m = read_seq.size();
   double match_matrix_[n][m];
@@ -88,13 +88,13 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
  }
  left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
- //std::cout << "alignment of sequence with size " << read_seq << " to haplotype with size " << haplotype_seq << " with l_prob " << left_prob << std::endl;
+ //::cout << "alignment of sequence with size " << read_seq << " to haplotype with size " << haplotype_seq << " with l_prob " << left_prob << std::endl;
 }
 
 
 void HapAligner::trim_alignment(const Alignment& aln, std::string& trimmed_seq){
     int32_t pos          = aln.get_start();
-    int32_t padding = 5;
+    int32_t padding = INDEL_FLANK_LEN;
     int32_t min_read_start = repeat_starts_[0] - padding;
     int32_t max_read_stop = repeat_ends_[0] + padding;
     int32_t start_pos = aln.get_start() + 1;
