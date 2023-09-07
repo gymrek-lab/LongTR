@@ -1,23 +1,21 @@
-The repository is a modified version of the HipSTR tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for PacBio HiFi long reads. The installation procedure remains identical to the original HipSTR tool. When executing the tool on a PacBio HiFi dataset, following parameters are recommended:
+The repository is a modified version of the HipSTR tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for PacBio HiFi long reads to genotype both STRs and and VNTRs. The installation procedure remains identical to the original HipSTR tool. When executing the tool on a PacBio HiFi dataset, following parameters are recommended:
 
 ```
 ./HipSTR --bams             long_read.bam
          --fasta            genome.fa
          --regions          str_regions.bed
-         --str-vcf          str_calls.vcf.gz
+         --tr-vcf           str_calls.vcf.gz
 	 --skip-assembly
-	 --max-flank-indel  1
 	 --min-sum-qual     <threshold>
-	 --no-rmdup
-	 --use-unpaired
-	 --max-str-len      <max-str-len>    
+	 --max-tr-len      <max-str-len>    
 	 --phased-bam
 ```
 Usage of most of the parameters can be found in the rest of this page. Here we describe additional parameters and their usage.
 
-* **phased-bam** : For using haplotype specific bam files. Input bam file should be happlotagged first to use this option. 
-* **skip-assembly** : This parameter as been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions.
+* **phased-bam** : For using haplotype-specific bam files. Input bam file should be happlotagged first to use this option. 
+* **skip-assembly** : This parameter has been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions.
 * **min-sum-qual** : Threshold for quality of read which is based on Illumina 1.8 Phred+33 quality score system.
+
 # HipSTR
 **H**aplotype **i**nference and **p**hasing for **S**hort **T**andem **R**epeats  
 ![HipSTR icon!](https://raw.githubusercontent.com/tfwillems/HipSTR/master/img/HipSTR_icon_small.png)	
