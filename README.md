@@ -1,4 +1,4 @@
-The repository is a modified version of the [HipSTR](https://github.com/HipSTR-Tool/HipSTR) tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for PacBio HiFi long reads to genotype both STRs and VNTRs. The documentation presented below predominantly derives from the original documentation, with certain sections having been either added or omitted
+The repository is a modified version of the [HipSTR](https://github.com/HipSTR-Tool/HipSTR) tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for PacBio HiFi long reads to genotype both STRs and VNTRs. The documentation presented below predominantly derives from the original documentation, with certain sections having been either added or omitted.
 
 
 # HipSTR
