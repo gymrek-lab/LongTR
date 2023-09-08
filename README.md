@@ -152,12 +152,6 @@ INFO fields contains aggregated statistics about each genotyped STR in the VCF. 
 
 FIELD | DESCRIPTION
 ----- | -----------
-INFRAME_PGEOM  | Parameter for in-frame geometric step size distribution
-INFRAME_UP     | Probability that stutter causes an in-frame increase in obs. STR size
-INFRAME_DOWN   | Probability that stutter causes an in-frame decrease in obs. STR size
-OUTFRAME_PGEOM | Parameter for out-of-frame geometric step size distribution
-OUTFRAME_UP    | Probability that stutter causes an out-of-frame increase in obs. STR size
-OUTFRAME_DOWN  | Probability that stutter causes an out-of-frame decrease in obs. STR size
 BPDIFFS        | Base pair difference of each alternate allele from the reference allele
 START          | Inclusive start coodinate for the repetitive portion of the reference allele
 END            | Inclusive end coordinate for the repetitive portion of the reference allele
@@ -167,6 +161,7 @@ REFAC          | Reference allele count
 AC             | Alternate allele counts
 NSKIP          | Number of samples not genotyped due to various issues
 NFILT          | Number of samples that were originally genotyped but have since been filtered
+INEXACT_ALLELE |  
 DP             | Total number of reads used to genotype all samples
 DSNP           | Total number of reads with SNP information
 DSTUTTER       | Total number of reads with a stutter indel in the STR region
