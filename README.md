@@ -161,10 +161,9 @@ REFAC          | Reference allele count
 AC             | Alternate allele counts
 NSKIP          | Number of samples not genotyped due to various issues
 NFILT          | Number of samples that were originally genotyped but have since been filtered
-INEXACT_ALLELE |  
+INEXACT_ALLELE | Boolean showing if each alternate allele is exact or approximated by POA, 0 for exact 1 for approximated 
 DP             | Total number of reads used to genotype all samples
 DSNP           | Total number of reads with SNP information
-DSTUTTER       | Total number of reads with a stutter indel in the STR region
 DFLANKINDEL    | Total number of reads with an indel in the regions flanking the STR
 
 #### FORMAT fields
@@ -182,7 +181,6 @@ PDP       | Fractional reads supporting each haploid genotype
 GLDIFF    | Difference in likelihood between the reported and next best genotypes
 DSNP      | Total number of reads with SNP information
 PSNP      | Number of reads with SNPs supporting each haploid genotype
-DSTUTTER  | Number of reads with a stutter indel in the STR region
 DFLANKINDEL | Number of reads with an indel in the regions flanking the STR
 AB        | log10 of the allele bias pvalue, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
 FS        | log10 of the strand bias pvalue from Fisher's exact test, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
