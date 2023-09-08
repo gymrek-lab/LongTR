@@ -91,7 +91,7 @@ class BamProcessor {
    locus_bam_seek_time_     = -1;
    total_read_filter_time_  = 0;
    locus_read_filter_time_  = -1;
-   MAX_STR_LENGTH           = 100;
+   MAX_STR_LENGTH           = 1000;
    MIN_SUM_QUAL_LOG_PROB    = -10;
    quiet_                   = false;
    silent_                  = false;

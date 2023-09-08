@@ -107,7 +107,7 @@ public:
     MAX_EM_ITER            = 100;
     ABS_LL_CONVERGE        = 0.01;
     FRAC_LL_CONVERGE       = 0.001;
-    MIN_TOTAL_READS        = 100;
+    MIN_TOTAL_READS        = 10;
     MAX_TOTAL_HAPLOTYPES   = 1000;
     MAX_FLANK_HAPLOTYPES   = 4;
     INDEL_FLANK_LEN        = 5;

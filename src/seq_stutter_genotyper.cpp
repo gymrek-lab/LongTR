@@ -1244,12 +1244,13 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	StutterModel* stutter_model = haplotype_->get_block(hap_block_index)->get_repeat_info()->get_stutter_model();
 
 	// Add INFO field items
-	out << "\tINFRAME_PGEOM=" << stutter_model->get_parameter(true,  'P') << ";"
-		<< "INFRAME_UP="      << stutter_model->get_parameter(true,  'U') << ";"
-		<< "INFRAME_DOWN="    << stutter_model->get_parameter(true,  'D') << ";"
-		<< "OUTFRAME_PGEOM="  << stutter_model->get_parameter(false, 'P') << ";"
-		<< "OUTFRAME_UP="     << stutter_model->get_parameter(false, 'U') << ";"
-		<< "OUTFRAME_DOWN="   << stutter_model->get_parameter(false, 'D') << ";"
+	out
+	//  << "\tINFRAME_PGEOM=" << stutter_model->get_parameter(true,  'P') << ";"
+	//	<< "INFRAME_UP="      << stutter_model->get_parameter(true,  'U') << ";"
+	//	<< "INFRAME_DOWN="    << stutter_model->get_parameter(true,  'D') << ";"
+	//	<< "OUTFRAME_PGEOM="  << stutter_model->get_parameter(false, 'P') << ";"
+	//	<< "OUTFRAME_UP="     << stutter_model->get_parameter(false, 'U') << ";"
+	//	<< "OUTFRAME_DOWN="   << stutter_model->get_parameter(false, 'D') << ";"
 		<< "START="           << region.start()+1 << ";"
 		<< "END="             << region.stop()    << ";"
 		<< "PERIOD="          << region.period()  << ";"
@@ -1283,7 +1284,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	}
 	out << "DP="          << tot_dp          << ";"
 		<< "DSNP="        << tot_dsnp        << ";"
-		<< "DSTUTTER="    << tot_dstutter    << ";"
+	//	<< "DSTUTTER="    << tot_dstutter    << ";"
 		<< "DFLANKINDEL=" << tot_dflankindel << ";";
 
 	// Add allele counts
