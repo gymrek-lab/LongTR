@@ -1244,7 +1244,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	StutterModel* stutter_model = haplotype_->get_block(hap_block_index)->get_repeat_info()->get_stutter_model();
 
 	// Add INFO field items
-	out
+	out << "\t"
 	//  << "\tINFRAME_PGEOM=" << stutter_model->get_parameter(true,  'P') << ";"
 	//	<< "INFRAME_UP="      << stutter_model->get_parameter(true,  'U') << ";"
 	//	<< "INFRAME_DOWN="    << stutter_model->get_parameter(true,  'D') << ";"
