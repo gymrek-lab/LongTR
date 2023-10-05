@@ -6,11 +6,11 @@ The repository is a modified version of the [HipSTR](https://github.com/HipSTR-T
 ## Installation
 HipSTR requires a standard c++ compiler. To obtain HipSTR, use:
 
-    git clone https:/github.com/gymrek-lab/LongSTR
+	git clone https:/github.com/gymrek-lab/LongSTR
 
 To build, use Make:
 
-    cd HipSTR
+    cd LongSTR
     make
 
 The commands will construct an executable file called **HipSTR** in the current directory, for which you can view detailed help information by typing 
