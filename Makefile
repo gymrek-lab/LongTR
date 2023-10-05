@@ -32,7 +32,7 @@ OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
 CEPHES_ROOT=lib/cephes
 HTSLIB_ROOT=lib/htslib
 
-LIBS              = -L./ -lm -L$(HTSLIB_ROOT)/ -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -L/projects/ps-gymreklab/helia/HipSTR_LR/spoa/build/lib -lspoa
+LIBS              = -L./ -lm -L$(HTSLIB_ROOT)/ -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -L/projects/ps-gymreklab/helia/HipSTR_LR/spoa/build/lib -lspoa
 INCLUDE           = -Ilib -Ilib/htslib -I/projects/ps-gymreklab/helia/HipSTR_LR/spoa/usr/local/include
 CEPHES_LIB        = lib/cephes/libprob.a
 HTSLIB_LIB        = $(HTSLIB_ROOT)/libhts.a
