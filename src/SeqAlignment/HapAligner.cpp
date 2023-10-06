@@ -88,6 +88,9 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
  }
  left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
+ delete [] deletion_matrix_;
+ delete [] insert_matrix_;
+ delete [] match_matrix_;
  //::cout << "alignment of sequence with size " << read_seq << " to haplotype with size " << haplotype_seq << " with l_prob " << left_prob << std::endl;
 }
 
