@@ -12,10 +12,11 @@
 #include <sys/stat.h>
 
 #include "htslib/bgzf.h"
-#include "htslib/cram/cram.h"
+#include "htslib/cram.h"
 #include "htslib/sam.h"
 
 #include "error.h"
+ #include "unistd.h"
 
 // htslib encodes each base using a 4 bit integer
 // This array converts each integer to its corresponding base
@@ -462,6 +463,14 @@ private:
   BamCramReader& operator=(const BamCramReader& other);
 
   bool file_exists(const std::string& path){
+    if (path.rfind("gs://", 0) == 0) {
+      std::cerr << "Skippring file check for GCS path " << path.c_str() << std::endl;
+      return true;
+    }
+    if (path.rfind("https://s3", 0) == 0) {
+      std::cerr << "Skippring file check for AWS path " << path.c_str() << std::endl;
+      return true;
+    }
     return (access(path.c_str(), F_OK) != -1);
   }
 
@@ -547,8 +556,8 @@ class BamCramMultiReader {
 
   ~BamCramMultiReader(){
     delete multi_header_;
-    for (size_t i = 0; i < bam_readers_.size(); i++)
-      delete bam_readers_[i];
+//    for (size_t i = 0; i < bam_readers_.size(); i++)
+//      delete bam_readers_[i];
   }
 
   int get_merge_type() const { return merge_type_; }
