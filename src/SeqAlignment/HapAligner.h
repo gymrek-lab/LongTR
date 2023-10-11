@@ -19,6 +19,7 @@ class HapAligner {
   std::vector<int32_t> repeat_starts_;
   std::vector<int32_t> repeat_ends_;
   int INDEL_FLANK_LEN;
+  int SWITCH_OLD_ALIGN_LEN;
 
   /**
    * Align the sequence contained in SEQ_0 -> SEQ_N using the recursion
@@ -26,8 +27,15 @@ class HapAligner {
    **/
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
+
   void align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 			const char* seq_0, int seq_len, double& left_prob, const double* base_log_wrong, const double* base_log_correct);
+
+   void align_seq_to_hap_short(Haplotype* haplotype, bool reuse_alns,
+			const char* seq_0, int seq_len,
+			const double* base_log_wrong, const double* base_log_correct,
+			double* match_matrix, double* insert_matrix, double* deletion_matrix,
+			int* best_artifact_size, int* best_artifact_pos, double& left_prob);
 
   /**
    * Compute the log-probability of the alignment given the alignment matrices for the left and right segments.
@@ -60,12 +68,13 @@ class HapAligner {
   HapAligner& operator=(const HapAligner& other);
 
  public:
-  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype, int INDEL_FLANK_LEN_){
+  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype, int INDEL_FLANK_LEN_, int SWITCH_OLD_ALIGN_LEN_){
     assert(realign_to_haplotype.size() == haplotype->num_combs());
     fw_haplotype_   = haplotype;
     rev_haplotype_  = haplotype->reverse(rev_blocks_);
     realign_to_hap_ = realign_to_haplotype;
     INDEL_FLANK_LEN = INDEL_FLANK_LEN_;
+    SWITCH_OLD_ALIGN_LEN = SWITCH_OLD_ALIGN_LEN_;
 
     for (int i = 0; i < fw_haplotype_->num_blocks(); i++){
       HapBlock* block = fw_haplotype_->get_block(i);
@@ -89,7 +98,7 @@ class HapAligner {
   int calc_seed_base(const Alignment& alignment);
 
   void process_read(const Alignment& aln, int seed_base, const BaseQuality* base_quality, bool retrace_aln,
-		    double* prob_ptr, AlignmentTrace& traced_aln);
+		    double* prob_ptr, AlignmentTrace& traced_aln, int short_);
 
   void process_reads(const std::vector<Alignment>& alignments, int init_read_index, const BaseQuality* base_quality, const std::vector<bool>& realign_read,
 		     double* aln_probs, int* seed_positions);
