@@ -81,6 +81,7 @@ void HaplotypeGenerator::trim(int ideal_min_length, int32_t& region_start, int32
 }
 
 bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_start, int32_t region_end, std::string& seq) const {
+  //std::cout << aln.getCigarString() << std::endl;
   if (aln.get_deleted()){ // repeat is deleted
     seq = "";
     return true;
@@ -128,12 +129,13 @@ bool HaplotypeGenerator::extract_sequence(const Alignment& aln, int32_t region_s
     }
     else if (pos >= region_start){
       int32_t num_bases = std::min(region_end-pos, cigar_iter->get_num()-char_index);
+      //std::cout << cigar_iter->get_type() << std::endl;
       switch(cigar_iter->get_type()){
       case 'I':
         num_bases = cigar_iter->get_num();
         reg_seq << aln.get_alignment().substr(align_index, num_bases);
 	break;
-      case '=': case 'X':
+      case '=': case 'X': case 'M':
 	reg_seq << aln.get_alignment().substr(align_index, num_bases);
 	pos += num_bases;
 	break;
