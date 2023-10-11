@@ -30,7 +30,7 @@ TODO:
 #include <ostream>
 #include <stdexcept>
 
-#include "htslib/htslib/bgzf.h"
+#include "htslib/bgzf.h"
 
 class bgzf_streambuf : public std::streambuf {
  private:

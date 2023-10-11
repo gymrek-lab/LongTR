@@ -14,7 +14,7 @@
 #include "stringops.h"
 
 extern "C" {
-#include "htslib/htslib/faidx.h"
+#include "htslib/faidx.h"
 }
 
 /*

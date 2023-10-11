@@ -16,6 +16,7 @@
 #include "../stringops.h"
 #include "../version.h"
 #include "../vcf_reader.h"
+#include "unistd.h"
 
 bool file_exists(const std::string& path){
   return (access(path.c_str(), F_OK) != -1);

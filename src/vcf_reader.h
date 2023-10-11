@@ -8,9 +8,9 @@
 #include <vector>
 
 extern "C" {
-#include "htslib/htslib/bgzf.h" 
-#include "htslib/htslib/tbx.h" 
-#include "htslib/htslib/vcf.h" 
+#include "htslib/bgzf.h"
+#include "htslib/tbx.h"
+#include "htslib/vcf.h"
 }
 
 #include "error.h"
