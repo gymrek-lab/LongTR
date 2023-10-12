@@ -23,19 +23,20 @@ SRC_HIPSTR  = src/hipstr_main.cpp src/bam_processor.cpp src/stutter_model.cpp sr
 SRC_SEQALN  = src/SeqAlignment/HapAligner.cpp src/SeqAlignment/AlignmentModel.cpp src/SeqAlignment/AlignmentOps.cpp src/SeqAlignment/HapBlock.cpp src/SeqAlignment/NeedlemanWunsch.cpp src/SeqAlignment/Haplotype.cpp src/SeqAlignment/HaplotypeGenerator.cpp src/SeqAlignment/HTMLCreator.cpp src/SeqAlignment/AlignmentViz.cpp src/SeqAlignment/AlignmentTraceback.cpp src/SeqAlignment/StutterAlignerClass.cpp
 SRC_DENOVO  = src/denovos/denovo_main.cpp src/error.cpp src/stringops.cpp src/version.cpp src/pedigree.cpp src/haplotype_tracker.cpp src/vcf_input.cpp src/denovos/denovo_scanner.cpp src/mathops.cpp src/vcf_reader.cpp src/denovos/denovo_allele_priors.cpp src/denovos/trio_denovo_scanner.cpp
 
+CMAKE_ROOT=/projects/ps-gymreklab/helia/TR_1000G/package/cmake/cmake-3.20.1/bin/cmake
+CEPHES_ROOT=lib/cephes
+HTSLIB_INSTALL=/projects/ps-gymreklab/helia/HipSTR_LR/LongSTR/lib/HTSLIB
+
+LIBS              = -L./ -lm -Llib/HTSLIB/lib -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -Llib/spoa/build/lib -lspoa
+INCLUDE           = -Ilib -Ilib/HTSLIB/include -Ilib/spoa/usr/local/include
+CEPHES_LIB        = lib/cephes/libprob.a
+HTSLIB_LIB        = lib/HTSLIB/lib/libhts.a
+
 # For each CPP file, generate an object file
 OBJ_COMMON  := $(SRC_COMMON:.cpp=.o)
 OBJ_HIPSTR  := $(SRC_HIPSTR:.cpp=.o)
 OBJ_SEQALN  := $(SRC_SEQALN:.cpp=.o)
 OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
-
-CEPHES_ROOT=lib/cephes
-HTSLIB_ROOT=lib/htslib
-
-LIBS              = -L./ -lm -L$(HTSLIB_ROOT)/ -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -L/projects/ps-gymreklab/helia/HipSTR_LR/spoa/build/lib -lspoa
-INCLUDE           = -Ilib -Ilib/htslib -I/projects/ps-gymreklab/helia/HipSTR_LR/spoa/usr/local/include
-CEPHES_LIB        = lib/cephes/libprob.a
-HTSLIB_LIB        = $(HTSLIB_ROOT)/libhts.a
 
 .PHONY: all
 all: HipSTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
@@ -66,7 +67,7 @@ clean:
 # Clean all compiled files
 .PHONY: clean-all
 clean-all: clean
-	cd lib/htslib && $(MAKE) clean
+	cd lib/HTSLIB && $(MAKE) clean
 	rm lib/cephes/*.o $(CEPHES_LIB)
 
 # The GNU Make trick to include the ".d" (dependencies) files.
@@ -75,6 +76,38 @@ clean-all: clean
 include $(subst .cpp,.d,$(SRC))
 
 # The resulting binary executable
+
+.PHONY: HTSLIB
+HTSLIB:
+	if [ ! -d "lib/HTSLIB" ]; then \
+		git clone --recurse-submodules https://github.com/samtools/htslib.git lib/;
+	else
+		echo "HTSLIB directory already exists in lib/ folder";
+	fi
+.PHONY: HTSLIB-update
+HTSLIB-update: HTSLIB 
+	@cd lib/HTSLIB && git pull
+
+.PHONY: HTSLIB-docker
+HTSLIB-docker: HTSLIB-update
+	@cd lib/HTSLIB && autoreconf -i && ./configure --prefix=${HTSLIB_INSTALL} --enable-gcs --enable-s3 --enable-libcurl && make && make install
+
+
+.PHONY: SPOA
+SPOA:
+	if [ ! -d "lib/spoa" ]; then \
+		git clone git@github.com:rvaser/spoa.git  lib/;
+	else
+		echo "spoa directory already exists in lib/ folder";
+	fi
+
+.PHONY: SPOA-update
+SPOA-update: SPOA
+        @cd lib/spoa && git pull
+
+.PHONY: SPOA-docker
+SPOA-docker: SPOA-update
+        @cd lib/spoa && mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make && make install 
 
 HipSTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
 	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LIBS)
@@ -115,6 +148,3 @@ test/vcf_snp_tree_test: test/vcf_snp_tree_test.cpp src/error.cpp src/snp_tree.cp
 $(CEPHES_LIB):
 	cd lib/cephes && $(MAKE)
 
-# Rebuild htslib library if needed
-$(HTSLIB_LIB):
-	cd lib/htslib && $(MAKE)
