@@ -108,7 +108,12 @@ SPOA-update: SPOA
 
 .PHONY: SPOA-docker
 SPOA-docker: SPOA-update
-	@cd lib/spoa && mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make && make install && cd ../..
+	@cd lib/spoa
+	@if [ ! -d "build" ]; then \
+		mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make -j && make install && cd ../..;\
+	else\
+		cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make -j && make install && cd ../..;\
+	fi
 
 HipSTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
 	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LIBS)
