@@ -25,12 +25,12 @@ SRC_DENOVO  = src/denovos/denovo_main.cpp src/error.cpp src/stringops.cpp src/ve
 
 CMAKE_ROOT=/projects/ps-gymreklab/helia/TR_1000G/package/cmake/cmake-3.20.1/bin/cmake
 CEPHES_ROOT=lib/cephes
-HTSLIB_INSTALL=/projects/ps-gymreklab/helia/HipSTR_LR/LongSTR/lib/HTSLIB
+HTSLIB_INSTALL=/projects/ps-gymreklab/helia/HipSTR_LR/LongSTR/lib/htslib
 
-LIBS              = -L./ -lm -Llib/HTSLIB/lib -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -Llib/spoa/build/lib -lspoa
-INCLUDE           = -Ilib -Ilib/HTSLIB/include -Ilib/spoa/usr/local/include
+LIBS              = -L./ -lm -Llib/htslib/lib -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -Llib/spoa/build/lib -lspoa
+INCLUDE           = -Ilib -Ilib/htslib/include -Ilib/spoa/usr/local/include
 CEPHES_LIB        = lib/cephes/libprob.a
-HTSLIB_LIB        = lib/HTSLIB/lib/libhts.a
+HTSLIB_LIB        = lib/htslib/lib/libhts.a
 
 # For each CPP file, generate an object file
 OBJ_COMMON  := $(SRC_COMMON:.cpp=.o)
@@ -39,7 +39,7 @@ OBJ_SEQALN  := $(SRC_SEQALN:.cpp=.o)
 OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
 
 .PHONY: all
-all: HipSTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
+all: HTSLIB-docker SPOA-docker HipSTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
 
 # Create a tarball with static binaries
 .PHONY: static-dist
@@ -67,7 +67,8 @@ clean:
 # Clean all compiled files
 .PHONY: clean-all
 clean-all: clean
-	cd lib/HTSLIB && $(MAKE) clean
+	cd lib/spoa &&  $(MAKE) clean
+	cd lib/htslib && $(MAKE) clean
 	rm lib/cephes/*.o $(CEPHES_LIB)
 
 # The GNU Make trick to include the ".d" (dependencies) files.
@@ -79,35 +80,35 @@ include $(subst .cpp,.d,$(SRC))
 
 .PHONY: HTSLIB
 HTSLIB:
-	if [ ! -d "lib/HTSLIB" ]; then \
-		git clone --recurse-submodules https://github.com/samtools/htslib.git lib/;
-	else
-		echo "HTSLIB directory already exists in lib/ folder";
+	@if [ ! -d "lib/htslib" ]; then \
+		cd lib && git clone --recurse-submodules https://github.com/samtools/htslib.git && cd ..;\
+	else\
+		echo "htslib directory already exists in lib/ folder";\
 	fi
 .PHONY: HTSLIB-update
 HTSLIB-update: HTSLIB 
-	@cd lib/HTSLIB && git pull
+	@cd lib/htslib && git pull && cd ../..
 
 .PHONY: HTSLIB-docker
 HTSLIB-docker: HTSLIB-update
-	@cd lib/HTSLIB && autoreconf -i && ./configure --prefix=${HTSLIB_INSTALL} --enable-gcs --enable-s3 --enable-libcurl && make && make install
+	@cd lib/htslib && autoreconf -i && ./configure --prefix=${HTSLIB_INSTALL} --enable-gcs --enable-s3 --enable-libcurl && make && make install && cd ../..
 
 
 .PHONY: SPOA
 SPOA:
-	if [ ! -d "lib/spoa" ]; then \
-		git clone git@github.com:rvaser/spoa.git  lib/;
-	else
-		echo "spoa directory already exists in lib/ folder";
+	@if [ ! -d "lib/spoa" ]; then \
+		cd lib && git clone git@github.com:rvaser/spoa.git && cd ..;\
+	else\
+		echo "spoa directory already exists in lib/ folder";\
 	fi
 
 .PHONY: SPOA-update
 SPOA-update: SPOA
-        @cd lib/spoa && git pull
+	@cd lib/spoa && git pull && cd ../..
 
 .PHONY: SPOA-docker
 SPOA-docker: SPOA-update
-        @cd lib/spoa && mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make && make install 
+	@cd lib/spoa && mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make && make install && cd ../..
 
 HipSTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
 	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LIBS)
