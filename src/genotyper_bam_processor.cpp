@@ -64,42 +64,92 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
         left_alns.back().set_hap_gen_info(region_passes);
         continue;
       }
-      auto iter      = seq_to_alns.find(alignments[i][j].QueryBases());
-      bool have_prev = (iter != seq_to_alns.end());
-      if (have_prev)
-        have_prev &= left_alns[iter->second].get_sequence().size() == alignments[i][j].QueryBases().size();
+    Alignment new_aln(alignments[i][j].Position(), alignments[i][j].GetEndPosition() - 1,
+                    alignments[i][j].IsReverseStrand(), alignments[i][j].GetDeleted(), alignments[i][j].Name(),
+                    alignments[i][j].Qualities(), uppercase(alignments[i][j].QueryBases()), "");
 
-      if (!have_prev){
-        left_alns.push_back(Alignment(alignments[i][j].Name()));
-        if (alignments[i][j].MatchesReference())
-          convertAlignment(alignments[i][j], chrom_seq, left_alns.back());
-        else if (!realign(alignments[i][j], chrom_seq, left_alns.back())){
+    std::string read_sequence = uppercase(alignments[i][j].QueryBases());
+    int32_t seq_index = 0, ref_index = alignments[i][j].Position();
+    bool soft_clipped = 0;
+    std::stringstream aln_ss;
+    for (auto cigar_iter = alignments[i][j].CigarData().begin(); cigar_iter != alignments[i][j].CigarData().end(); cigar_iter++){
+        int32_t cigar_index    = 0;
+        char prev_cigar_type   = '=';
+        int32_t prev_cigar_num = 0;
 
-	  // Failed to realign read
-          align_fail_count++;
-          left_alns.pop_back();
-          continue;
-	}
+        switch (cigar_iter->Type){
+        case 'H':
+          break;
+        case 'S':
+          new_aln.add_cigar_element(CigarElement(cigar_iter->Type, cigar_iter->Length));
+          seq_index += cigar_iter->Length;
+          soft_clipped = 1;
+          break;
+        case 'I':
+          new_aln.add_cigar_element(CigarElement(cigar_iter->Type, cigar_iter->Length));
+          aln_ss << read_sequence.substr(seq_index, cigar_iter->Length);
+          seq_index += cigar_iter->Length;
+          break;
+        case 'D':
+          new_aln.add_cigar_element(CigarElement(cigar_iter->Type, cigar_iter->Length));
+          aln_ss << std::string(cigar_iter->Length, '-');
+          ref_index += cigar_iter->Length;
+          break;
+        case 'M': case '=': case 'X':
+          while (cigar_index < cigar_iter->Length){
+        if (read_sequence[seq_index] == static_cast<char>(toupper(chrom_seq[ref_index]))){
+          if (prev_cigar_type == '=')
+            prev_cigar_num++;
+          else {
+            if (prev_cigar_num != 0)
+              new_aln.add_cigar_element(CigarElement(prev_cigar_type, prev_cigar_num));
+            prev_cigar_type = '=';
+            prev_cigar_num  = 1;
+          }
+        }
+        else {
+          if (prev_cigar_type == 'X')
+            prev_cigar_num++;
+          else {
+            if (prev_cigar_num != 0)
+              new_aln.add_cigar_element(CigarElement(prev_cigar_type, prev_cigar_num));
+            prev_cigar_type = 'X';
+            prev_cigar_num  = 1;
+          }
+        }
+        aln_ss << read_sequence[seq_index];
+        cigar_index++; ref_index++; seq_index++;
+          }
+          if (prev_cigar_num != 0)
+        new_aln.add_cigar_element(CigarElement(prev_cigar_type, prev_cigar_num));
+          break;
+        default:
+          printErrorAndDie("Invalid CIGAR option encountered in convertAlignment");
+          break;
+        }
+   }
+   new_aln.set_alignment(aln_ss.str());
+   if (soft_clipped){
+    align_fail_count++;
+    continue;
+    }
 
-	seq_to_alns[alignments[i][j].QueryBases()] = left_alns.size()-1;
-      }
-      else {
-        // Reuse alignments if the sequence has already been observed and didn't lead to a soft-clipped alignment
-        // Soft-clipping is problematic because it complicates base quality extration (but not really that much)
-        Alignment& prev_aln = left_alns[iter->second];
-        assert(prev_aln.get_sequence().size() == alignments[i][j].QueryBases().size());
-	std::string bases = uppercase(alignments[i][j].QueryBases());
-        Alignment new_aln(prev_aln.get_start(), prev_aln.get_stop(), alignments[i][j].IsReverseStrand(), prev_aln.get_deleted(), alignments[i][j].Name(), alignments[i][j].Qualities(), bases, prev_aln.get_alignment());
-        new_aln.set_cigar_list(prev_aln.get_cigar_list());
-        left_alns.push_back(new_aln);
-      }
-      left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
-      filt_log_p1[i].push_back(log_p1[i][j]);
-      filt_log_p2[i].push_back(log_p2[i][j]);
+//   Alignment old_aln(alignments[i][j].Name());
+//   realign(alignments[i][j], chrom_seq, old_aln);
+//   std::cout << old_aln.get_sequence() << std::endl;
+//   std::cout << new_aln.get_sequence() << std::endl;
+   //assert(old_aln.get_sequence() == new_aln.get_sequence());
 
-      passes_region_filters.clear();
-      BamProcessor::passes_filters(alignments[i][j], passes_region_filters);
-      left_alns.back().set_hap_gen_info(passes_region_filters);
+   left_alns.push_back(new_aln);
+   seq_to_alns[alignments[i][j].QueryBases()] = left_alns.size()-1;
+
+      //left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
+    filt_log_p1[i].push_back(log_p1[i][j]);
+    filt_log_p2[i].push_back(log_p2[i][j]);
+
+    passes_region_filters.clear();
+    BamProcessor::passes_filters(alignments[i][j], passes_region_filters);
+    left_alns.back().set_hap_gen_info(passes_region_filters);
     }
   }
 
@@ -234,7 +284,7 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
     bool run_assembly = (REQUIRE_SPANNING == 0);
 
     seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
-					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN);
+					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
     if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
       bool pass = true;
 

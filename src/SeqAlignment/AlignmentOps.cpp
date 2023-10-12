@@ -23,6 +23,7 @@ bool realign(BamAlignment& alignment, const std::string& ref_sequence, Alignment
     float score;
     std::vector<CigarOp> cigar_list;
     bool aligned = NeedlemanWunsch::Align(ref_seq, read_seq, ref_al, read_al, &score, cigar_list);
+
     
     // Calculate number of leading spaces in read's alignment and start position
     unsigned int num_lead = 0;

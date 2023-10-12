@@ -213,7 +213,6 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
       if (alignment.MatePosition()+alignment.Length()+100 < region_group.start())
 	continue;
     }
-
     // Stop parsing reads if we've already exceeded the maximum number for downstream analyses
     if (paired_str_alns.size() > MAX_TOTAL_READS){
       TOO_MANY_READS = true;
@@ -566,7 +565,7 @@ void BamProcessor::process_regions(BamCramMultiReader& reader, const std::string
       continue;
     }
     
-    // Read FASTA sequence for chromosome 
+    // Read FASTA sequence for chromosome
     if (region_iter->chrom().compare(cur_chrom) != 0){
       cur_chrom = region_iter->chrom();
       fasta_reader.get_sequence(cur_chrom, chrom_seq);

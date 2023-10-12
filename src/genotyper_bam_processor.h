@@ -111,6 +111,7 @@ public:
     MAX_TOTAL_HAPLOTYPES   = 1000;
     MAX_FLANK_HAPLOTYPES   = 4;
     INDEL_FLANK_LEN        = 5;
+    SWITCH_OLD_ALIGN_LEN   = 0;
     MIN_FLANK_FREQ         = 0.01;
     VIZ_LEFT_ALNS          = 0;
     total_stutter_time_    = 0;
@@ -246,6 +247,7 @@ public:
 
   int MAX_TOTAL_HAPLOTYPES;
   int INDEL_FLANK_LEN;
+  int SWITCH_OLD_ALIGN_LEN;
 
 
   int MAX_FLANK_HAPLOTYPES;

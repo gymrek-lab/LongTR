@@ -181,23 +181,24 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
 void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const {
   const int n = cent_seq.size(), m = read_seq.size();
   const int gap_score = 1, match_score = 0, mismatch_score = 1;
-  int dp[n+1][m+1];
+  int32_t* dp = new int32_t [(n+1)*(m+1)];
 
   for (int i = 0; i < n+1; i++){
-    dp[i][0] = i * gap_score;
+    dp[i*m] = i * gap_score;
   }
 
   for (int j = 0; j < m+1; j++){
-    dp[0][j] = j * gap_score;
+    dp[j] = j * gap_score;
   }
 
   for (int i = 1; i < n+1; i++){
     for (int j = 1; j < m+1; j++){
       int S = (cent_seq[i-1] == read_seq[j-1]) ? match_score : mismatch_score;
-      dp[i][j] = std::min(dp[i-1][j] + gap_score, std::min(dp[i][j-1] + gap_score, dp[i-1][j-1] + S));
+      dp[i * m + j] = std::min(dp[(i-1)*m + j] + gap_score, std::min(dp[i * m + j-1] + gap_score, dp[(i-1)*m + j-1] + S));
     }
   }
-  score = dp[n][m];
+  score = dp[(n+1)*(m+1) - 1];
+  delete [] dp;
 }
 
 // Clustering reads based on the similarity between them. The similarity is computed based on edit distance.
@@ -389,6 +390,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
             }
          }
        }
+
      }
   }
 
