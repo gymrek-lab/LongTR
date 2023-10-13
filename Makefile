@@ -5,7 +5,7 @@
 ## Default compilation flags.
 ## Override with:
 ##   make CXXFLAGS=XXXXX
-CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread  #-pedantic -Wunreachable-code -Weverything
+CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread
 
 ## To create a static distribution file, run:
 ##   make static-dist
@@ -23,12 +23,10 @@ SRC_HIPSTR  = src/hipstr_main.cpp src/bam_processor.cpp src/stutter_model.cpp sr
 SRC_SEQALN  = src/SeqAlignment/HapAligner.cpp src/SeqAlignment/AlignmentModel.cpp src/SeqAlignment/AlignmentOps.cpp src/SeqAlignment/HapBlock.cpp src/SeqAlignment/NeedlemanWunsch.cpp src/SeqAlignment/Haplotype.cpp src/SeqAlignment/HaplotypeGenerator.cpp src/SeqAlignment/HTMLCreator.cpp src/SeqAlignment/AlignmentViz.cpp src/SeqAlignment/AlignmentTraceback.cpp src/SeqAlignment/StutterAlignerClass.cpp
 SRC_DENOVO  = src/denovos/denovo_main.cpp src/error.cpp src/stringops.cpp src/version.cpp src/pedigree.cpp src/haplotype_tracker.cpp src/vcf_input.cpp src/denovos/denovo_scanner.cpp src/mathops.cpp src/vcf_reader.cpp src/denovos/denovo_allele_priors.cpp src/denovos/trio_denovo_scanner.cpp
 
-CMAKE_ROOT=/projects/ps-gymreklab/helia/TR_1000G/package/cmake/cmake-3.20.1/bin/cmake
 CEPHES_ROOT=lib/cephes
-HTSLIB_INSTALL=/projects/ps-gymreklab/helia/HipSTR_LR/LongSTR/lib/htslib
 
 LIBS              = -L./ -lm -Llib/htslib/lib -lz -L$(CEPHES_ROOT)/ -llzma -lbz2 -lcurl -lcrypto -Llib/spoa/build/lib -lspoa
-INCLUDE           = -Ilib -Ilib/htslib/include -Ilib/spoa/usr/local/include
+INCLUDE           = -Ilib -Ilib/htslib/include -Ilib/spoa/include
 CEPHES_LIB        = lib/cephes/libprob.a
 HTSLIB_LIB        = lib/htslib/lib/libhts.a
 
@@ -87,11 +85,11 @@ HTSLIB:
 	fi
 .PHONY: HTSLIB-update
 HTSLIB-update: HTSLIB 
-	@cd lib/htslib && git pull && cd ../..
+	@cd lib/htslib && git pull
 
 .PHONY: HTSLIB-docker
 HTSLIB-docker: HTSLIB-update
-	@cd lib/htslib && autoreconf -i && ./configure --prefix=${HTSLIB_INSTALL} --enable-gcs --enable-s3 --enable-libcurl && make && make install && cd ../..
+	@cd lib/htslib && autoreconf -i && ./configure --prefix="$(CURDIR)"/lib/htslib --enable-gcs --enable-s3 --enable-libcurl && make -j && make install
 
 
 .PHONY: SPOA
@@ -104,15 +102,14 @@ SPOA:
 
 .PHONY: SPOA-update
 SPOA-update: SPOA
-	@cd lib/spoa && git pull && cd ../..
+	@cd lib/spoa && git pull
 
 .PHONY: SPOA-docker
 SPOA-docker: SPOA-update
-	@cd lib/spoa
-	@if [ ! -d "build" ]; then \
-		mkdir build && cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make -j && make install && cd ../..;\
+	@if [ ! -d "lib/spoa/build" ]; then \
+		cd lib/spoa && mkdir build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	else\
-		cd build && $(CMAKE_ROOT) -DCMAKE_BUILD_TYPE=Release .. && make -j && make install && cd ../..;\
+		cd lib/spoa/build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	fi
 
 HipSTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
