@@ -15,6 +15,7 @@ test/stutter_aligner_test
 test/vcf_snp_tree_test
 lib/cephes/libprob.a
 lib/cephes/*.o
+lib/HTSLIB
 src/*.o
 src/*.d
 src/*~

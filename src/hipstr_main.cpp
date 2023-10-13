@@ -29,7 +29,7 @@ bool is_file(const std::string& name){
   return (S_ISREG (st_buf.st_mode));
 }
 
-void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len){
+void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len, int def_switch_old_align_len){
   std::cerr << "Usage: HipSTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --tr-vcf <tr_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
     
 	    << "Required parameters:" << "\n"
@@ -101,7 +101,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--hap-chr-file       <hap_chroms.txt> "  << "\t" << "File containing chromosomes to treat as haploid, one per line"                        << "\n"
 	    << "\t" << "--min-reads          <num_reads>      "  << "\t" << "Minimum total reads required to genotype a locus (Default = " << def_min_reads << ")" << "\n"
 	    << "\t" << "--max-reads          <num_reads>      "  << "\t" << "Skip a locus if it has more than NUM_READS reads (Default = " << def_max_reads << ")" << "\n"
-	    << "\t" << "--max-tr-len        <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
+	    << "\t" << "--max-tr-len         <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
     //<< "\t" << "--skip-genotyping                     "  << "\t" << "Don't perform any STR genotyping and merely compute the stutter model for each STR"  << "\n"
     //<< "\t" << "--dont-use-all-reads                  "  << "\t" << "Only utilize the reads HipSTR thinks will be informative for genotyping"   << "\n"
     //<< "\t" << "                                      "  << "\t" << " Enabling this option usually slightly decreases accuracy but shortens runtimes (~2x)"      << "\n"
@@ -110,6 +110,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
             << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing TRs (Default = use all SNPs)"         << "\n"
 	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
 	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
+	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
 	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n" << std::endl;
 //	    << "\n" << "\n"
 //	    << "*** Looking for answers to commonly asked questions or usage examples? ***"                     << "\n"
@@ -134,13 +135,14 @@ void parse_command_line_args(int argc, char** argv,
   int def_max_haplotypes    = bam_processor.MAX_TOTAL_HAPLOTYPES;
   double def_min_flank_freq = bam_processor.MIN_FLANK_FREQ;
   int def_indel_flank_len = bam_processor.INDEL_FLANK_LEN;
+  int def_switch_old_align_len = bam_processor.SWITCH_OLD_ALIGN_LEN;
 
   if (argc == 1 || (argc == 2 && std::string("-h").compare(std::string(argv[1])) == 0)){
-    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len);
+    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len);
     exit(0);
   }
 
-  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 0, indel_flank_len = 5;
+  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 0, indel_flank_len = 5, switch_old_align_len = 0;
 
   static struct option long_options[] = {
     {"bams",            required_argument, 0, 'b'},
@@ -193,6 +195,7 @@ void parse_command_line_args(int argc, char** argv,
     {"silent",             no_argument, &silent_log, 1},
     {"skip-genotyping",    no_argument, &skip_genotyping, 1},
     {"skip-assembly",	   no_argument, &skip_assembly, 1},
+    {"stutter-align-len",    required_argument, 0, 'O'},
     {"indel-flank-len",    required_argument, 0, 'L'},
     {0, 0, 0, 0}
   };
@@ -320,6 +323,8 @@ void parse_command_line_args(int argc, char** argv,
 	break;
 	case 'L':
 	bam_processor.INDEL_FLANK_LEN = atof(optarg);
+	case 'O':
+	bam_processor.SWITCH_OLD_ALIGN_LEN = atof(optarg);
 	break;
     case '?':
       printErrorAndDie("Unrecognized command line option");
@@ -344,7 +349,7 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
   if (print_help){
-    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len);
+    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len);
     exit(0);
   }
   if (quiet_log)
