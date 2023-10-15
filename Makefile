@@ -107,7 +107,7 @@ SPOA-update: SPOA
 .PHONY: SPOA-docker
 SPOA-docker: SPOA-update
 	@if [ ! -d "lib/spoa/build" ]; then \
-		cd lib/spoa && mkdir build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
+		cd lib/spoa && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	else\
 		cd lib/spoa/build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	fi
