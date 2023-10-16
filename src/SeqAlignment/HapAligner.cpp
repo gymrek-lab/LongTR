@@ -234,12 +234,7 @@ double HapAligner::compute_aln_logprob(int base_seq_len, int seed_base,
 
 
 void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
-				  const char* seq_0, int seq_len, double& left_prob, const double* base_log_wrong, const double* base_log_correct){
-  // NOTE: Input matrix structure: Row = Haplotype position, Column = Read index
-
-
-
-  double* L_log_probs = new double[seq_len];
+				  const char* seq_0, int seq_len, double& left_prob){
 
   // Initialize first row of matrix (each base position matched with leftmost haplotype base)
   left_prob = 0.0;
@@ -271,55 +266,39 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   //double coefficient = 0.5;
   double coefficient = 1.0;
   for (int i = 0; i < m; ++i){
-    //match_matrix_[0][i]    = (read_seq[i] == haplotype_seq[0] ? MATCH : MISMATCH) + left_prob;
     match_matrix[i] = (read_seq[i] == haplotype_seq[0] ? MATCH : MISMATCH) + left_prob;
-    //insert_matrix_[0][i]   = IMPOSSIBLE;
     insertion_matrix[i] = IMPOSSIBLE;
-    //deletion_matrix_[0][i] = coefficient*LOG_MATCH_TO_DEL[homopolymer_len] + left_prob;
     deletion_matrix[i] = coefficient*LOG_MATCH_TO_DEL[homopolymer_len] + left_prob; // First row
     left_prob += coefficient*LOG_DEL_TO_DEL;
   }
 
   left_prob = 0.0;
   for (int i = 0; i < n; ++i){
-    //match_matrix_[i][0]    = (read_seq[0] == haplotype_seq[i] ? MATCH : MISMATCH) + left_prob;
     match_matrix[i * m] = (read_seq[0] == haplotype_seq[i] ? MATCH : MISMATCH) + left_prob;
-    //insert_matrix_[i][0]   = MATCH + coefficient*LOG_MATCH_TO_INS[homopolymer_len] + left_prob;
     insertion_matrix[i * m] = MATCH + coefficient*LOG_MATCH_TO_INS[homopolymer_len] + left_prob;
-    //deletion_matrix_[i][0] = IMPOSSIBLE;
     deletion_matrix[i * m] = IMPOSSIBLE; // First column
     left_prob += coefficient*LOG_INS_TO_INS;
   }
+
   for (int j = 1; j < n; j++){
     for (int i = 1; i < m; i++){
-
 	  double match_emit     = (haplotype_seq[j] == read_seq[i] ? MATCH : MISMATCH);
-	  //match_matrix_[j][i]    = coefficient*match_emit + std::max(match_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_MATCH[homopolymer_len],
-	  //                                     std::max(deletion_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_DEL[homopolymer_len],
-	  //                                                insert_matrix_[j-1][i-1] + coefficient*LOG_MATCH_TO_INS[homopolymer_len]));
+
       match_matrix[j * m + i] =  coefficient*match_emit + std::max(match_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_MATCH[homopolymer_len],
                                        std::max(deletion_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_DEL[homopolymer_len],
                                                   insertion_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_INS[homopolymer_len]));
-	  //insert_matrix_[j][i]   = MATCH + std::max(match_matrix_[j][i-1] + coefficient*LOG_INS_TO_MATCH,
-	 //								insert_matrix_[j][i-1] + coefficient*LOG_INS_TO_INS);
 	  insertion_matrix[j * m + i]	= 	MATCH + std::max(match_matrix[j * m + i - 1] + coefficient*LOG_INS_TO_MATCH,
 									insertion_matrix[j * m + i - 1] + coefficient*LOG_INS_TO_INS);
-
-	  //deletion_matrix_[j][i] = std::max(match_matrix_[j-1][i]  + coefficient*LOG_DEL_TO_MATCH,
-	  //					   deletion_matrix_[j-1][i] + coefficient*LOG_DEL_TO_DEL);
       deletion_matrix[j * m + i] = std::max(match_matrix[(j-1) * m + i]  + coefficient*LOG_DEL_TO_MATCH,
 						   deletion_matrix[(j-1) * m + i] + coefficient*LOG_DEL_TO_DEL);
     }
-
  }
 
- //left_prob = std::max(deletion_matrix_[n-1][m-1], std::max(insert_matrix_[n-1][m-1], match_matrix_[n-1][m-1]));
  left_prob = std::max(deletion_matrix[n * m - 1], std::max(insertion_matrix[n * m - 1], match_matrix[n * m - 1]));
  //std::cout << "alignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
  delete [] match_matrix;
  delete [] insertion_matrix;
  delete [] deletion_matrix;
-
 }
 
 
@@ -792,16 +771,6 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
    if (short_ == 0){
       //assert(seed_base != -1);
       assert(aln.get_sequence().size() == aln.get_base_qualities().size());
-      // Extract probabilites related to base quality scores
-      double* base_log_wrong   = new double[aln.get_sequence().size()]; // log10(Prob(error))
-      double* base_log_correct = new double[aln.get_sequence().size()]; // log10(Prob(correct))
-      const std::string& qual_string = aln.get_base_qualities();
-      for (unsigned int j = 0; j < qual_string.size(); j++){
-        base_log_wrong[j]   = base_quality->log_prob_error(qual_string[j]);
-        base_log_correct[j] = base_quality->log_prob_correct(qual_string[j]);
-    //    base_log_wrong[j] = -10.5392;
-    //    base_log_correct[j] = -7.9436e-05;
-    }
       // Here we trim the read sequence because the flanking regions are too long for alignment to haplotypes
       std::string base_seq_str;
       trim_alignment(aln, base_seq_str);
@@ -821,8 +790,6 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
       // Reverse bases and quality scores for the right flank
       std::string rev_rseq = base_seq_str.substr(seed_base+1);
       std::reverse(rev_rseq.begin(), rev_rseq.end());
-      std::reverse(base_log_wrong+seed_base+1,   base_log_wrong+base_seq_len);
-      std::reverse(base_log_correct+seed_base+1, base_log_correct+base_seq_len);
 
       // True iff we should reuse alignment information from the previous haplotype to accelerate computations
       bool reuse_alns = false;
@@ -837,7 +804,7 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
         double l_prob, r_prob;
         int max_index;
 
-        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob, base_log_wrong, base_log_correct);
+        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob);
         double LL = l_prob;
         *prob_ptr = LL;
         prob_ptr++;
