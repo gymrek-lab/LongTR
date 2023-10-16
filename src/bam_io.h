@@ -512,7 +512,6 @@ public:
 class BamCramMultiReader {
  private:
   std::vector<BamCramReader*> bam_readers_;
-  std::vector<bool> reader_unset_;
   std::vector<BamAlignment> cached_alns_;
   std::vector<std::pair<int32_t, int32_t> > aln_heap_;
   int merge_type_;
@@ -548,7 +547,6 @@ class BamCramMultiReader {
       }
     }
     merge_type_   = merge_type;
-    reader_unset_ = std::vector<bool>(bam_readers_.size(), false);
     chrom_        = "";
     start_        = -1;
     end_          = -1;
@@ -556,6 +554,7 @@ class BamCramMultiReader {
 
   ~BamCramMultiReader(){
     delete multi_header_;
+//    std::cout << bam_readers_.size() << std::endl;
 //    for (size_t i = 0; i < bam_readers_.size(); i++)
 //      delete bam_readers_[i];
   }
