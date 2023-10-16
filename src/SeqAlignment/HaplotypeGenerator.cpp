@@ -181,7 +181,8 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
 void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const {
   const int n = cent_seq.size(), m = read_seq.size();
   const int gap_score = 1, match_score = 0, mismatch_score = 1;
-  int32_t* dp = new int32_t [(n+1)*(m+1)];
+  std::unique_ptr<int32_t[]> dp(new int32_t[(n + 1) * (m + 1)]);
+  std::fill(dp.get(), dp.get() + ((n + 1) * (m + 1)), 0);
 
   for (int i = 0; i < n+1; i++){
     dp[i*m] = i * gap_score;
@@ -198,7 +199,6 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
     }
   }
   score = dp[(n+1)*(m+1) - 1];
-  delete [] dp;
 }
 
 // Clustering reads based on the similarity between them. The similarity is computed based on edit distance.
@@ -211,8 +211,9 @@ void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs,
     int min_score = INT_MAX;
     int min_cntr;
     for (int j = 0; j < centroids.size(); j++) {
-      int score;
-      needleman_wunsch(seqs[i], centroids[j], score);
+      int score = -1;
+      HaplotypeGenerator::needleman_wunsch(seqs[i], centroids[j], score);
+      assert(score != -1);
       if (score < min_score) {
         min_score = score;
         min_cntr = j;
@@ -235,8 +236,9 @@ bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_cent
         int T = 0.1 * new_centroids[i].size(); // TODO make it constant
         for (int j = 0; j < new_centroids.size(); j++){
             if (i != j && (clusters.find(new_centroids[i]) != clusters.end()) && (clusters.find(new_centroids[j]) != clusters.end())){
-                int score;
-                needleman_wunsch(new_centroids[i], new_centroids[j], score); // Find the edit distance between centroids of two clusters
+                int score = -1;
+                HaplotypeGenerator::needleman_wunsch(new_centroids[i], new_centroids[j], score); // Find the edit distance between centroids of two clusters
+                assert(score != -1);
                 if (score < T){
                     updated = true;
                     for (auto seq:clusters[new_centroids[j]]){
