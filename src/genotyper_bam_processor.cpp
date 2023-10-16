@@ -40,7 +40,7 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
 					     std::vector< std::vector<double> >& filt_log_p1,  std::vector< std::vector<double> >& filt_log_p2,
 					     std::vector<Alignment>& left_alns){
   locus_left_aln_time_ = clock();
-  selective_logger() << "Left aligning reads" << std::endl;
+  selective_logger() << "Trimming reads" << std::endl;
   std::map<std::string, int> seq_to_alns;
   int32_t align_fail_count = 0, total_reads = 0;
   left_alns.clear(); filt_log_p1.clear(); filt_log_p2.clear();
@@ -134,16 +134,10 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
     continue;
     }
 
-//   Alignment old_aln(alignments[i][j].Name());
-//   realign(alignments[i][j], chrom_seq, old_aln);
-//   std::cout << old_aln.get_sequence() << std::endl;
-//   std::cout << new_aln.get_sequence() << std::endl;
-   //assert(old_aln.get_sequence() == new_aln.get_sequence());
-
    left_alns.push_back(new_aln);
    seq_to_alns[alignments[i][j].QueryBases()] = left_alns.size()-1;
 
-      //left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
+    left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
     filt_log_p1[i].push_back(log_p1[i][j]);
     filt_log_p2[i].push_back(log_p2[i][j]);
 
@@ -156,7 +150,7 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
   locus_left_aln_time_  = (clock() - locus_left_aln_time_)/CLOCKS_PER_SEC;
   total_left_aln_time_ += locus_left_aln_time_;
   if (align_fail_count != 0)
-    selective_logger() << "Failed to left align " << align_fail_count << " out of " << total_reads << " reads" << std::endl;
+    selective_logger() << "Failed to trim align " << align_fail_count << " out of " << total_reads << " reads" << std::endl;
 }
 
 StutterModel* GenotyperBamProcessor::learn_stutter_model(std::vector<BamAlnList>& alignments,
@@ -315,14 +309,14 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
     selective_logger() << " Genotyping          = " << locus_genotype_time()       << " seconds\n";
     if (vcf_writer_.is_open()){
       assert(seq_genotyper != NULL);
-      selective_logger() << "\t" << " Left alignment        = "  << locus_left_aln_time_             << " seconds\n"
+      selective_logger() << "\t" << "Trim alignment        = "  << locus_left_aln_time_             << " seconds\n"
 			 << "\t" << " Haplotype generation  = "  << seq_genotyper->hap_build_time()  << " seconds\n"
 			 << "\t" << " Haplotype alignment   = "  << seq_genotyper->hap_aln_time()    << " seconds\n"
 			 << "\t" << " Flank assembly        = "  << seq_genotyper->assembly_time()   << " seconds\n"
 			 << "\t" << " Posterior computation = "  << seq_genotyper->posterior_time()  << " seconds\n"
 			 << "\t" << " Alignment traceback   = "  << seq_genotyper->aln_trace_time()  << " seconds\n";
 
-      process_timer_.add_time("Left alignment",        locus_left_aln_time_);
+      process_timer_.add_time("Trimming alignment",        locus_left_aln_time_);
       process_timer_.add_time("Haplotype generation",  seq_genotyper->hap_build_time());
       process_timer_.add_time("Haplotype alignment",   seq_genotyper->hap_aln_time());
       process_timer_.add_time("Flank assembly",        seq_genotyper->assembly_time());

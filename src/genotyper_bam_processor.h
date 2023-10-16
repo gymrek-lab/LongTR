@@ -231,7 +231,7 @@ public:
 		  //<< " Stutter estimation  = " << total_stutter_time()        << " seconds\n"
 		  << " Genotyping          = " << total_genotype_time()       << " seconds\n";
 
-    full_logger() << "\t" << " Left alignment        = "  << process_timer_.get_total_time("Left alignment")        << " seconds\n"
+    full_logger() << "\t" << " Trimming alignment        = "  << process_timer_.get_total_time("Trimming alignment")        << " seconds\n"
 		  << "\t" << " Haplotype generation  = "  << process_timer_.get_total_time("Haplotype generation")  << " seconds\n"
 		  << "\t" << " Haplotype alignment   = "  << process_timer_.get_total_time("Haplotype alignment")   << " seconds\n"
 		  << "\t" << " Flank assembly        = "  << process_timer_.get_total_time("Flank assembly")        << " seconds\n"
