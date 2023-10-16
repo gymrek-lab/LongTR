@@ -5,7 +5,7 @@
 ## Default compilation flags.
 ## Override with:
 ##   make CXXFLAGS=XXXXX
-CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread  -fsanitize=address -fno-omit-frame-pointer -O4
+CXXFLAGS= -O3 -g -D__STDC_LIMIT_MACROS -D_FILE_OFFSET_BITS=64 -std=c++0x -DMACOSX -pthread
 
 ## To create a static distribution file, run:
 ##   make static-dist
@@ -65,7 +65,6 @@ clean:
 # Clean all compiled files
 .PHONY: clean-all
 clean-all: clean
-	cd lib/spoa &&  $(MAKE) clean
 	cd lib/htslib && $(MAKE) clean
 	rm lib/cephes/*.o $(CEPHES_LIB)
 
