@@ -46,7 +46,7 @@ class Haplotype {
     nchanges_.resize(blocks_.size());
     inc_rev_ = false;
     init();
-    aln_haps_to_ref();
+    //aln_haps_to_ref();
   }
 
   void print_nchanges(std::ostream& out) const {
