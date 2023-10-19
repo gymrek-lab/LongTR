@@ -955,19 +955,3 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
   }
 }
 
-AlignmentTrace* HapAligner::trace_optimal_aln(const Alignment& orig_aln, int seed_base, int best_haplotype, const BaseQuality* base_quality){
-  fw_haplotype_->go_to(best_haplotype);
-  fw_haplotype_->fix();
-  rev_haplotype_->go_to(best_haplotype);
-  fw_haplotype_->fix();
-  int short_ = 0;
-  if (fw_haplotype_->get_block(1)->get_repeat_info()->get_period() == 1 && fw_haplotype_->get_block(1)->get_seq(0).size() < SWITCH_OLD_ALIGN_LEN){
-    short_ = 1;
-  }
-  double prob;
-  AlignmentTrace* trace = new AlignmentTrace(fw_haplotype_->num_blocks());
-  process_read(orig_aln, seed_base, base_quality, true, &prob, *trace, short_);
-  fw_haplotype_->unfix();
-  rev_haplotype_->unfix();
-  return trace;
-}
