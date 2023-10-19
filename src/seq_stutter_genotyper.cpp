@@ -260,9 +260,7 @@ void SeqStutterGenotyper::get_unused_alleles(bool check_spanned, bool check_call
 	std::vector< std::pair<int,int> > haps;
 	get_optimal_haplotypes(haps);
 
-	// Retrace the alignments
-	std::vector<AlignmentTrace*> traced_alns;
-	retrace_alignments(traced_alns);
+	// Retrace the alignments -> deleted
 
 	// Determine which samples have >= 1 aligned read
 	std::vector<bool> aligned_read(num_samples_, false);
@@ -286,33 +284,7 @@ void SeqStutterGenotyper::get_unused_alleles(bool check_spanned, bool check_call
 		std::vector<bool> spanned(block->num_options(), false);
 		std::vector<bool>  called(block->num_options(), false);
 
-		// Mark all alleles spanned by at least one ML alignment
-		if (check_spanned){
-			double* read_LL_ptr = log_aln_probs_;
-			for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
-				if (seed_positions_[read_index] < 0){
-					read_LL_ptr += num_alleles_;
-					continue;
-				}
-				AlignmentTrace* trace = traced_alns[read_index];
-				if (trace->traced_aln().get_start() < block->start()){
-					if (trace->traced_aln().get_stop() > block->end()){
-						if (trace->stutter_size(block_index) == 0){
-							int hap_a    = haps[sample_label_[read_index]].first;
-							int hap_b    = haps[sample_label_[read_index]].second;
-							int best_hap = hap_a;
-							if (!haploid_ && (hap_a != hap_b)){
-								double v1 = log_p1_[read_index]+read_LL_ptr[hap_a], v2 = log_p2_[read_index]+read_LL_ptr[hap_b];
-								if (std::fabs(v1-v2) > TOLERANCE)
-									best_hap = (v1 > v2 ? hap_a : hap_b);
-							}
-							spanned[hap_to_allele[best_hap]] = true;
-						}
-					}
-				}
-				read_LL_ptr += num_alleles_;
-			}
-		}
+		// Mark all alleles spanned by at least one ML alignment -> deleted
 
 		// Mark all alleles where at least one sample contains the allele in its optimal haplotypes
 		if (check_called){
@@ -593,38 +565,6 @@ void SeqStutterGenotyper::calc_hap_aln_probs(std::vector<bool>& realign_to_haplo
 	total_hap_aln_time_ += locus_hap_aln_time;
 }
 
-bool SeqStutterGenotyper::id_and_align_to_stutter_alleles(int max_total_haplotypes, std::ostream& logger){
-	std::vector< std::vector<int> > alleles_to_remove(haplotype_->num_blocks());
-	int new_total_haps = haplotype_->num_combs();
-	while (true){
-		// Look for candidate alleles present in stutter artifacts
-		bool added_alleles = false;
-		std::vector< std::vector<std::string> > stutter_seqs(haplotype_->num_blocks());
-		for (int i = 0; i < haplotype_->num_blocks(); i++){
-			HapBlock* block = haplotype_->get_block(i);
-			if (block->get_repeat_info() != NULL){
-				get_stutter_candidate_alleles(i, logger, stutter_seqs[i]);
-				added_alleles |= !stutter_seqs[i].empty();
-				std::sort(stutter_seqs[i].begin(), stutter_seqs[i].end(), orderByLengthAndSequence);
-				new_total_haps /= haplotype_->num_options(i);
-				new_total_haps *= (haplotype_->num_options(i) + stutter_seqs[i].size());
-			}
-		}
-		// Terminate if no new alleles identified in any of the blocks
-		if (!added_alleles) break;
-
-		// Quit if the haplotype now has too many candidates
-		if (new_total_haps > max_total_haplotypes){
-			logger << "Aborting genotyping of the locus as too many candidate haplotypes were found (# Found = " << new_total_haps <<  ", MAX = " << max_total_haplotypes << ")\n"
-				<< " See the --max-haps option " << "\n";
-			return false;
-		}
-
-		// Otherwise, add the new alleles to the haplotype and recompute the relevant values
-		add_and_remove_alleles(alleles_to_remove, stutter_seqs);
-	}
-	return true;
-}
 
 bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplotypes, double min_flank_freq, std::ostream& logger){
 	// Unsuccessful initialization. May be due to
@@ -816,40 +756,6 @@ void SeqStutterGenotyper::get_alleles(const Region& region, int block_index, con
 	pos += 1; // Fix off-by-1 VCF error
 }
 
-void SeqStutterGenotyper::debug_sample(int sample_index, std::ostream& logger){
-	std::vector<AlignmentTrace*> traced_alns;
-	retrace_alignments(traced_alns);
-
-	std::cerr << "DEBUGGING SAMPLE..." << std::endl;
-	std::cerr << "READ LL's:" << std::endl;
-	double* read_LL_ptr = log_aln_probs_;
-	for (unsigned int i = 0; i < num_reads_; ++i){
-		if(sample_label_[i] == sample_index && seed_positions_[i] >= 0){
-			std::cerr << "\t" << "READ #" << i << ", SEED BASE=" << seed_positions_[i] << ", POOL INDEX=" << pool_index_[i] << ", IS_SECOND_MATE=" << second_mate_[i]
-				<< ", TOTAL QUAL CORRECT= " << base_quality_.sum_log_prob_correct(alns_[i].get_base_qualities())
-				<< max_index(read_LL_ptr, num_alleles_) << ", "
-				<< log_p1_[i] << " " << log_p2_[i] <<  ", "
-				<< alns_[i].get_sequence().substr(0, seed_positions_[i])
-				<< " " << alns_[i].get_sequence().substr(seed_positions_[i]+1) << std::endl
-				<< traced_alns[i]->hap_aln() << std::endl
-				<< traced_alns[i]->traced_aln().get_alignment()  << std::endl
-				<< traced_alns[i]->traced_aln().getCigarString() << std::endl;
-
-			for (unsigned int j = 0; j < num_alleles_; ++j, ++read_LL_ptr)
-				std::cerr << "\t\t" << j << " " << *read_LL_ptr << std::endl;
-		}
-		else
-			read_LL_ptr += num_alleles_;
-	}
-
-	std::cerr << std::endl << "SAMPLE LL's:" << std::endl;
-	double* sample_LL_ptr = log_sample_posteriors_ + num_alleles_*num_alleles_*sample_index;
-	for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
-		for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr)
-			std::cerr << index_1 << " " << index_2 << " " << *sample_LL_ptr << "(" << exp(*sample_LL_ptr) << ")" << std::endl;
-	std::cerr << "END OF SAMPLE DEBUGGING" << std::endl;
-}
-
 void SeqStutterGenotyper::retrace_alignments(std::vector<AlignmentTrace*>& traced_alns){
 	assert(traced_alns.size() == 0);
 	double trace_start = clock();
@@ -888,127 +794,6 @@ void SeqStutterGenotyper::retrace_alignments(std::vector<AlignmentTrace*>& trace
 	total_aln_trace_time_ += (clock() - trace_start)/CLOCKS_PER_SEC;
 }
 
-void SeqStutterGenotyper::get_stutter_candidate_alleles(int str_block_index, std::ostream& logger, std::vector<std::string>& candidate_seqs){
-	assert(candidate_seqs.size() == 0 && haplotype_->get_block(str_block_index)->get_repeat_info() != NULL);
-	HapBlock* str_block = haplotype_->get_block(str_block_index);
-	std::vector<AlignmentTrace*> traced_alns;
-	retrace_alignments(traced_alns);
-
-	// Count the number of reads spanning the STR and the number of reads with stutter
-	std::vector<int> sample_counts(num_samples_, 0);
-	std::vector< std::map<std::string, int> > sample_stutter_counts(num_samples_);
-	for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
-		if (traced_alns[read_index] == NULL)
-			continue;
-		AlignmentTrace* trace = traced_alns[read_index];
-		if (trace->traced_aln().get_start() < str_block->start()){
-			if (trace->traced_aln().get_stop() > str_block->end()){
-				if (trace->stutter_size(str_block_index) != 0)
-					sample_stutter_counts[sample_label_[read_index]][trace->str_seq(str_block_index)]++;
-				sample_counts[sample_label_[read_index]]++;
-			}
-		}
-	}
-
-	// Add frequently observed stutter artifacts as candidate sequences
-	std::set<std::string> candidate_set;
-	for (unsigned int i = 0; i < num_samples_; i++)
-		for (auto seq_iter = sample_stutter_counts[i].begin(); seq_iter != sample_stutter_counts[i].end(); seq_iter++)
-			if (seq_iter->second >= 2 && 1.0*seq_iter->second/sample_counts[i] >= 0.15)
-				if (!str_block->contains(seq_iter->first))
-					candidate_set.insert(seq_iter->first);
-	candidate_seqs = std::vector<std::string>(candidate_set.begin(), candidate_set.end());
-
-	if (candidate_seqs.size() != 0){
-		logger << "Identified " << candidate_seqs.size() << " additional candidate alleles from stutter artifacts" << "\n";
-		for (unsigned int i = 0; i < candidate_seqs.size(); i++)
-			logger << "\t" << candidate_seqs[i] << "\n";
-	}
-}
-
-/*
-   void SeqStutterGenotyper::analyze_flank_snps(std::ostream& logger){
-   std::vector<AlignmentTrace*> traced_alns;
-   std::vector< std::pair<int, int> > haps;
-   retrace_alignments(traced_alns);
-   get_optimal_haplotypes(haps);
-
-   double* read_LL_ptr = log_aln_probs_;
-   int min_read_index = 0, read_index;
-   for (int sample_index = 0; sample_index < num_samples_; sample_index++){
-   int hap_a = haps[sample_index].first;
-   int hap_b = haps[sample_index].second;
-   std::map<std::pair<int32_t, char>, int> hap_snp_counts;
-   std::vector<std::pair<int32_t, int32_t> > hap_read_coords;
-
-   for (read_index = min_read_index; read_index < num_reads_; read_index++){
-   if (traced_alns[read_index] == NULL){
-   read_LL_ptr += num_alleles_;
-   continue;
-   }
-   if (sample_label_[read_index] != sample_index)
-   break;
-
-   AlignmentTrace* trace = traced_alns[read_index];
-   hap_read_coords.push_back(std::pair<int32_t,int32_t>(trace->traced_aln().get_start(), trace->traced_aln().get_stop()));
-   std::vector<std::pair<int32_t, char> >& snp_data = trace->flank_snp_data();
-   for (auto snp_iter = snp_data.begin(); snp_iter != snp_data.end(); snp_iter++)
-   hap_snp_counts[*snp_iter]++;
-   read_LL_ptr += num_alleles_;
-   }
-   min_read_index = read_index;
-
-   for (auto snp_iter = hap_snp_counts.begin(); snp_iter != hap_snp_counts.end(); snp_iter++){
-   if (snp_iter->second >= 2){
-   int32_t pos = snp_iter->first.first;
-   int num_span = 0;
-   for (int i = 0; i < hap_read_coords.size(); i++)
-   if (hap_read_coords[i].first < pos && hap_read_coords[i].second > pos)
-   num_span++;
-   const Region& region = region_group_->regions()[0];
-   std::cerr << "SNP INFO " << region.chrom() << " " << region.start()+1 << " " << sample_names_[sample_index] << " " << pos << " " << snp_iter->second << " " << num_span << std::endl;
-   }
-   }
-   }
-   }
-
-
-   void SeqStutterGenotyper::analyze_flank_indels(std::ostream& logger){
-   std::vector<AlignmentTrace*> traced_alns;
-   retrace_alignments(traced_alns);
-   std::vector<int> sample_counts(num_samples_, 0);
-   std::vector< std::map<std::pair<int,int>, int> > sample_flank_indel_counts(num_samples_);
-
-   for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
-   if (traced_alns[read_index] == NULL)
-   continue;
-   AlignmentTrace* trace = traced_alns[read_index];
-
-   if (!trace->has_stutter()){
-   bool use = false;
-   use     |= (trace->flank_ins_size() == 0 && trace->flank_del_size() != 0);
-   use     |= (trace->flank_ins_size() != 0 && trace->flank_del_size() == 0);
-   use     &= (trace->flank_indel_data().size() == 1);
-   if (use)
-   sample_flank_indel_counts[sample_label_[read_index]][trace->flank_indel_data()[0]]++;
-   }
-   sample_counts[sample_label_[read_index]]++;
-   }
-
-   std::map< std::pair<int,int>, int>  candidate_set;
-   for (unsigned int i = 0; i < num_samples_; i++)
-for (auto indel_iter = sample_flank_indel_counts[i].begin(); indel_iter != sample_flank_indel_counts[i].end(); indel_iter++)
-if (indel_iter->second >= 2 && 1.0*indel_iter->second/sample_counts[i] >= 0.15){
-	candidate_set[indel_iter->first]++;
-	//std::cerr << sample_names_[i] << " " << indel_iter->first.first << " " << indel_iter->first.second << std::endl;
-}
-
-if (candidate_set.size() != 0){
-	for (auto candidate_iter = candidate_set.begin(); candidate_iter != candidate_set.end(); candidate_iter++)
-		std::cerr << "FLANK INDEL " << region_group_->chrom() << " " << candidate_iter->first.first << " " << candidate_iter->first.second << " " << candidate_iter->second << std::endl;
-}
-}
-*/
 
 double SeqStutterGenotyper::compute_allele_bias(int hap_a_read_count, int hap_b_read_count){
 	// Compute p-value for allele read depth bias according to the counts of reads uniquely assigned to each haplotype
@@ -1537,43 +1322,4 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 //	}
 }
 
-bool SeqStutterGenotyper::recompute_stutter_models(std::ostream& logger, int max_total_haplotypes, int max_flank_haplotypes, double min_flank_freq,
-		int max_em_iter, double abs_ll_converge, double frac_ll_converge){
-	logger << "Retraining EM stutter genotyper using maximum likelihood alignments" << std::endl;
-	std::vector<AlignmentTrace*> traced_alns;
-	retrace_alignments(traced_alns);
 
-	for (int block_index = 0; block_index < haplotype_->num_blocks(); ++block_index){
-		HapBlock* block = haplotype_->get_block(block_index);
-		if (block->get_repeat_info() == NULL)
-			continue;
-
-		std::vector< std::vector<int> > str_num_bps(num_samples_);
-		std::vector< std::vector<double> > str_log_p1s(num_samples_), str_log_p2s(num_samples_);
-		for (unsigned int read_index = 0; read_index < num_reads_; ++read_index){
-			AlignmentTrace* trace = traced_alns[read_index];
-			if (trace != NULL){
-				if (trace->traced_aln().get_start() < block->start()){
-					if (trace->traced_aln().get_stop() > block->end()){
-						str_num_bps[sample_label_[read_index]].push_back(((int)trace->str_seq(block_index).size())+trace->stutter_size(block_index));
-						str_log_p1s[sample_label_[read_index]].push_back(log_p1_[read_index]);
-						str_log_p2s[sample_label_[read_index]].push_back(log_p2_[read_index]);
-					}
-				}
-			}
-		}
-
-		int period = block->get_repeat_info()->get_period();
-		EMStutterGenotyper length_genotyper(haploid_, period, str_num_bps, str_log_p1s, str_log_p2s, sample_names_, 0);
-		bool trained = length_genotyper.train(max_em_iter, abs_ll_converge, frac_ll_converge, false, logger);
-		if (!trained){
-			logger << "Retraining stutter model training failed" << std::endl;
-			return false;
-		}
-
-		logger << "Learned stutter model for block #" << block_index << ":" << (*length_genotyper.get_stutter_model()) << std::endl;
-		block->get_repeat_info()->set_stutter_model(length_genotyper.get_stutter_model());
-	}
-	trace_cache_.clear();
-	return genotype(max_total_haplotypes, max_flank_haplotypes, min_flank_freq, logger);
-}

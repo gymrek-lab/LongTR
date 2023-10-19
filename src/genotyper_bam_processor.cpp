@@ -284,8 +284,8 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
 
       // If appropriate, recalculate the stutter model using the haplotype ML alignments,
       // realign the reads and regenotype the samples
-      if (recalc_stutter_model_)
-	pass = seq_genotyper->recompute_stutter_models(selective_logger(), MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, MAX_EM_ITER, ABS_LL_CONVERGE, FRAC_LL_CONVERGE);
+//      if (recalc_stutter_model_)
+//	pass = seq_genotyper->recompute_stutter_models(selective_logger(), MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, MAX_EM_ITER, ABS_LL_CONVERGE, FRAC_LL_CONVERGE);
 
       if (pass){
 	num_genotype_success_++;
