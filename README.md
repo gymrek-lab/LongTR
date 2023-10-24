@@ -3,8 +3,12 @@ The repository is a modified version of the [HipSTR](https://github.com/HipSTR-T
 
 # HipSTR
 
+## Requirements 
+gcc 7+ | clang 4+
+cmake 3.12+
+
 ## Installation
-HipSTR requires a standard c++ compiler. To obtain HipSTR, use:
+To obtain HipSTR, use:
 
 	git clone git@github.com:gymrek-lab/LongSTR.git
 
