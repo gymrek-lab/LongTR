@@ -53,14 +53,11 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
     double* sample_LL_ptr = log_sample_posteriors_ + num_diplotypes*sample_label_[read_index];
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-        if (read_LL_ptr[index_1] < -600 || read_LL_ptr[index_2] < -600){
-            *sample_LL_ptr += std::max(read_LL_ptr[index_1], read_LL_ptr[index_2]);
-        }
-        else{
-            *sample_LL_ptr += log(exp(read_LL_ptr[index_1] + log_p1_[read_index] + LOG_ONE_HALF) + exp(read_LL_ptr[index_2] + log_p2_[read_index] + LOG_ONE_HALF));
-            //if (index_1 == 1 && index_2 == 1){
-              //  std::cout << sample_LL_ptr << " " << read_index << " " << read_LL_ptr[index_1] << " " << read_LL_ptr[index_2] << " " << *sample_LL_ptr << std::endl;}
-        }//TODO make this fast
+             // *sample_LL_ptr += fast_log_sum_exp(LOG_ONE_HALF + log_p1_[read_index] + read_LL_ptr[index_1],
+			//					    LOG_ONE_HALF + log_p2_[read_index] + read_LL_ptr[index_2]);
+             *sample_LL_ptr += log(exp(read_LL_ptr[index_1] + log_p1_[read_index] + LOG_ONE_HALF) + exp(read_LL_ptr[index_2] + log_p2_[read_index] + LOG_ONE_HALF));
+             //std::cout << index_1 << " " << index_2 << " " << log_p1_[read_index] << " " << log_p2_[read_index] << " " << *sample_LL_ptr << std::endl;
+        //TODO make this fast
         //assert(*sample_LL_ptr <= TOLERANCE);
       }
     }
@@ -77,9 +74,9 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
     //assert(sample_total_LL <= TOLERANCE);
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-      //std::cout << "before " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
-	*sample_LL_ptr -= sample_total_LL;
-	//std::cout << "final " << *sample_LL_ptr << std::endl;
+        //std::cout << "before " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
+	    *sample_LL_ptr -= sample_total_LL;
+	    //std::cout << "final " << *sample_LL_ptr << std::endl;
 	}
   }
 
