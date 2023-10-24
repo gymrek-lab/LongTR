@@ -5,6 +5,7 @@ The repository is a modified version of the [HipSTR](https://github.com/HipSTR-T
 
 ## Requirements 
 gcc 7+ | clang 4+
+
 cmake 3.12+
 
 ## Installation
