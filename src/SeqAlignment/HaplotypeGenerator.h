@@ -39,7 +39,7 @@ class HaplotypeGenerator {
 
   void poa(const std::vector<std::string>& seqs, std::string& consensus) const;
 
-  void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
+  void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score, int T) const;
 
   void greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters) const;
 
