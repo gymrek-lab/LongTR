@@ -143,9 +143,9 @@ void HapAligner::align_seq_to_hap_short(Haplotype* haplotype, bool reuse_alns,
 	std::vector<double> match_probs; match_probs.reserve(3); // Reuse for each iteration to avoid reallocation penalty
 	for (int j = 1; j < seq_len; ++j, ++matrix_index){
 	  // Compute all match-related deletion probabilities (including normal read extension, where k = 1)
-	  match_probs.push_back(insert_matrix[matrix_index-1]           + LOG_MATCH_TO_INS[homopolymer_len]);
-	  match_probs.push_back(match_matrix[matrix_index-seq_len-1]    + LOG_MATCH_TO_MATCH[homopolymer_len]);
-	  match_probs.push_back(deletion_matrix[matrix_index-seq_len-1] + LOG_MATCH_TO_DEL[homopolymer_len]);
+	  match_probs.push_back(insert_matrix[matrix_index-1]           + LOG_MATCH_TO_INS);
+	  match_probs.push_back(match_matrix[matrix_index-seq_len-1]    + LOG_MATCH_TO_MATCH);
+	  match_probs.push_back(deletion_matrix[matrix_index-seq_len-1] + LOG_MATCH_TO_DEL);
 
 	  double match_emit             = (seq_0[j] == hap_char ? base_log_correct[j] : base_log_wrong[j]);
 	  match_matrix[matrix_index]    = match_emit          + std::max(match_probs[0], std::max(match_probs[1], match_probs[2]));
@@ -238,20 +238,20 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   // Initialize first row of matrix (each base position matched with leftmost haplotype base)
   left_prob = 0.0;
-  char first_hap_base = haplotype->get_first_char();
   std::string read_seq = seq_0;
   if (haplotype->get_seq().size() <= 60){ //TODO, it usually happens in case of big deletions
     left_prob = IMPOSSIBLE;
     return;
   }
-  int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
+  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
   std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
-
+  if (std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size())) > 100){
+    left_prob = -std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size()))*5.0/100.0;
+    //std::cout << "halignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
+    return;
+  }
   int n = haplotype_seq.size();
   int m = read_seq.size();
-//  double match_matrix_[n][m];
-//  double deletion_matrix_[n][m];
-//  double insert_matrix_[n][m];
 
   double* deletion_matrix = new double [n*m];
   double* match_matrix = new double [n*m];
@@ -262,40 +262,38 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   float MISMATCH = -9.0;
   float MATCH = -0.000100005;
 
-
-  //double coefficient = 0.5;
-  double coefficient = 1.0;
   for (int i = 0; i < m; ++i){
     match_matrix[i] = (read_seq[i] == haplotype_seq[0] ? MATCH : MISMATCH) + left_prob;
     insertion_matrix[i] = IMPOSSIBLE;
-    deletion_matrix[i] = coefficient*LOG_MATCH_TO_DEL[homopolymer_len] + left_prob; // First row
-    left_prob += coefficient*LOG_DEL_TO_DEL;
+    deletion_matrix[i] = LOG_MATCH_TO_DEL + left_prob; // First row
+    left_prob += LOG_DEL_TO_DEL;
   }
 
   left_prob = 0.0;
   for (int i = 0; i < n; ++i){
     match_matrix[i * m] = (read_seq[0] == haplotype_seq[i] ? MATCH : MISMATCH) + left_prob;
-    insertion_matrix[i * m] = MATCH + coefficient*LOG_MATCH_TO_INS[homopolymer_len] + left_prob;
+    insertion_matrix[i * m] = MATCH + LOG_MATCH_TO_INS + left_prob;
     deletion_matrix[i * m] = IMPOSSIBLE; // First column
-    left_prob += coefficient*LOG_INS_TO_INS;
+    left_prob += LOG_INS_TO_INS;
   }
 
   for (int j = 1; j < n; j++){
     for (int i = 1; i < m; i++){
 	  double match_emit     = (haplotype_seq[j] == read_seq[i] ? MATCH : MISMATCH);
 
-      match_matrix[j * m + i] =  coefficient*match_emit + std::max(match_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_MATCH[homopolymer_len],
-                                       std::max(deletion_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_DEL[homopolymer_len],
-                                                  insertion_matrix[(j - 1) * m + i - 1] + coefficient*LOG_MATCH_TO_INS[homopolymer_len]));
-	  insertion_matrix[j * m + i]	= 	MATCH + std::max(match_matrix[j * m + i - 1] + coefficient*LOG_INS_TO_MATCH,
-									insertion_matrix[j * m + i - 1] + coefficient*LOG_INS_TO_INS);
-      deletion_matrix[j * m + i] = std::max(match_matrix[(j-1) * m + i]  + coefficient*LOG_DEL_TO_MATCH,
-						   deletion_matrix[(j-1) * m + i] + coefficient*LOG_DEL_TO_DEL);
+      match_matrix[j * m + i] =  match_emit + std::max(match_matrix[(j - 1) * m + i - 1] + LOG_MATCH_TO_MATCH,
+                                       std::max(deletion_matrix[(j - 1) * m + i - 1] + LOG_MATCH_TO_DEL,
+                                                  insertion_matrix[(j - 1) * m + i - 1] + LOG_MATCH_TO_INS));
+	  insertion_matrix[j * m + i]	= 	MATCH + std::max(match_matrix[j * m + i - 1] + LOG_INS_TO_MATCH,
+									insertion_matrix[j * m + i - 1] + LOG_INS_TO_INS);
+      deletion_matrix[j * m + i] = std::max(match_matrix[(j-1) * m + i]  + LOG_DEL_TO_MATCH,
+						   deletion_matrix[(j-1) * m + i] + LOG_DEL_TO_DEL);
     }
  }
 
- left_prob = std::max(deletion_matrix[n * m - 1], std::max(insertion_matrix[n * m - 1], match_matrix[n * m - 1]));
+ left_prob = std::max(deletion_matrix[n * m - 1], std::max(insertion_matrix[n * m - 1], match_matrix[n * m - 1]))/100.0;
  //std::cout << "alignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
+
  delete [] match_matrix;
  delete [] insertion_matrix;
  delete [] deletion_matrix;
@@ -505,6 +503,7 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
 			       double* aln_probs, int* seed_positions){
   assert(alignments.size() == realign_read.size());
   AlignmentTrace trace(fw_haplotype_->num_blocks());
+  std::vector<std::pair<std::string,double>> seen_alignment;
   double* prob_ptr = aln_probs + (init_read_index*fw_haplotype_->num_combs());
   int short_ = 0;
   if (fw_haplotype_->get_block(1)->get_repeat_info()->get_period() == 1 && fw_haplotype_->get_block(1)->get_seq(0).size() < SWITCH_OLD_ALIGN_LEN){
@@ -707,9 +706,9 @@ std::string HapAligner::retrace(Haplotype* haplotype, const char* read_seq, cons
 	int best_opt;
 	switch (matrix_type){
 	case MATCH:
-	  best_opt = triple_index_fn(insert_matrix[matrix_index-1]           + LOG_MATCH_TO_INS[homopolymer_len],
-				     deletion_matrix[matrix_index-seq_len-1] + LOG_MATCH_TO_DEL[homopolymer_len],
-				     match_matrix[matrix_index-seq_len-1]    + LOG_MATCH_TO_MATCH[homopolymer_len]);
+	  best_opt = triple_index_fn(insert_matrix[matrix_index-1]           + LOG_MATCH_TO_INS,
+				     deletion_matrix[matrix_index-seq_len-1] + LOG_MATCH_TO_DEL,
+				     match_matrix[matrix_index-seq_len-1]    + LOG_MATCH_TO_MATCH);
 	  if (best_opt == 0){
 	    matrix_type   = INS;
 	    matrix_index -= 1;
@@ -800,22 +799,15 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
           reuse_alns = false;
           continue;
         }
+        double prob;
         // Perform alignment to current haplotype
-        double l_prob, r_prob;
-        int max_index;
-
-        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob);
-        double LL = l_prob;
-        *prob_ptr = LL;
+        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, prob);
+        *prob_ptr =  prob;
         prob_ptr++;
         reuse_alns = true;
-
-        if (LL > max_LL){
-          max_LL = LL;
-    }
-      } while (fw_haplotype_->next() && rev_haplotype_->next());
-      fw_haplotype_->reset();
-      rev_haplotype_->reset();
+    } while (fw_haplotype_->next() && rev_haplotype_->next());
+    fw_haplotype_->reset();
+    rev_haplotype_->reset();
   }
   else{
   assert(seed_base != -1);
