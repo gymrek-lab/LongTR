@@ -287,29 +287,29 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
 	    continue;
 
 	  // Ignore read if there is another location within MAXIMAL_END_MATCH_WINDOW bp for which it has a longer end match
-	  if (MAXIMAL_END_MATCH_WINDOW > 0){
-	    bool maximum_end_matches = AlignmentFilters::HasLargestEndMatches(alignment, chrom_seq, 0, MAXIMAL_END_MATCH_WINDOW, MAXIMAL_END_MATCH_WINDOW);
-	    if (!maximum_end_matches){
-	      pass_two = std::string(regions.size(), '0');
-	      break;
-	    }
-	  }
-	  // Ignore read if it doesn't match perfectly for at least MIN_READ_END_MATCH bases on each end
-	  if (MIN_READ_END_MATCH > 0){
-	    std::pair<int,int> match_lens = AlignmentFilters::GetNumEndMatches(alignment, chrom_seq, 0);
-	    if (match_lens.first < MIN_READ_END_MATCH || match_lens.second < MIN_READ_END_MATCH){
-	      pass_two = std::string(regions.size(), '0');
-	      break;
-	    }
-	  }
-	  // Ignore read if there is an indel within the first MIN_BP_BEFORE_INDEL bps from each end
-	  if (MIN_BP_BEFORE_INDEL > 0){
-	    std::pair<int, int> num_bps = AlignmentFilters::GetEndDistToIndel(alignment);
-	    if ((num_bps.first != -1 && num_bps.first < MIN_BP_BEFORE_INDEL) || (num_bps.second != -1 && num_bps.second < MIN_BP_BEFORE_INDEL)){
-	      pass_two = std::string(regions.size(), '0');
-	      break;
-	    }
-	  }
+//	  if (MAXIMAL_END_MATCH_WINDOW > 0){
+//	    bool maximum_end_matches = AlignmentFilters::HasLargestEndMatches(alignment, chrom_seq, 0, MAXIMAL_END_MATCH_WINDOW, MAXIMAL_END_MATCH_WINDOW);
+//	    if (!maximum_end_matches){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
+//	  // Ignore read if it doesn't match perfectly for at least MIN_READ_END_MATCH bases on each end
+//	  if (MIN_READ_END_MATCH > 0){
+//	    std::pair<int,int> match_lens = AlignmentFilters::GetNumEndMatches(alignment, chrom_seq, 0);
+//	    if (match_lens.first < MIN_READ_END_MATCH || match_lens.second < MIN_READ_END_MATCH){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
+//	  // Ignore read if there is an indel within the first MIN_BP_BEFORE_INDEL bps from each end
+//	  if (MIN_BP_BEFORE_INDEL > 0){
+//	    std::pair<int, int> num_bps = AlignmentFilters::GetEndDistToIndel(alignment);
+//	    if ((num_bps.first != -1 && num_bps.first < MIN_BP_BEFORE_INDEL) || (num_bps.second != -1 && num_bps.second < MIN_BP_BEFORE_INDEL)){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
 	  pass_two[region_index] = '1';
 	}
       }
@@ -341,8 +341,8 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
 	  potential_mates.erase(aln_iter);
 	}
 	else {
-	  // Check if read's mate pair also overlaps the STR
-	  auto str_iter = potential_strs.find(aln_key);
+	  //auto str_iter = potential_strs.find(aln_key); // I don't think this is needed.
+	  auto str_iter = potential_strs.end();
 	  if (str_iter != potential_strs.end()){
 	    if (alignment.IsFirstMate() == str_iter->second.IsFirstMate()){
 	      read_count--;
@@ -443,7 +443,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
   if (REQUIRE_PAIRED_READS)
     selective_logger() << "\n\t" << num_filt_unpaired_reads << " did not have a mate pair";
   selective_logger() << "\n\t" << (paired_str_alns.size()+unpaired_str_alns.size()) << " PASSED ALL FILTERS"  << std::endl;
-    
+
   // Separate the reads based on their associated read groups
   std::map<std::string, int> rg_indices;
   for (unsigned int type = 0; type < 2; ++type){
