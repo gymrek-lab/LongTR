@@ -178,14 +178,18 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
     consensus = graph.GenerateConsensus();
 }
 
-void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const {
+void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score, int T) const {
   const int n = cent_seq.size(), m = read_seq.size();
+  if (abs(n - m) > T){ // If the difference in lenght is already more than threshold, the final score would definitely pass that
+     score = T + 1;
+     return;
+  }
   const int gap_score = 1, match_score = 0, mismatch_score = 1;
   std::unique_ptr<int32_t[]> dp(new int32_t[(n + 1) * (m + 1)]);
-  std::fill(dp.get(), dp.get() + ((n + 1) * (m + 1)), 0);
+  //std::fill(dp.get(), dp.get() + ((n + 1) * (m + 1)), 0);
 
   for (int i = 0; i < n+1; i++){
-    dp[i*m] = i * gap_score;
+    dp[i*(m+1)] = i * gap_score;
   }
 
   for (int j = 0; j < m+1; j++){
@@ -193,9 +197,15 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
   }
 
   for (int i = 1; i < n+1; i++){
+    int min_score_per_row = 1000;
     for (int j = 1; j < m+1; j++){
       int S = (cent_seq[i-1] == read_seq[j-1]) ? match_score : mismatch_score;
-      dp[i * m + j] = std::min(dp[(i-1)*m + j] + gap_score, std::min(dp[i * m + j-1] + gap_score, dp[(i-1)*m + j-1] + S));
+      dp[i * (m+1) + j] = std::min(dp[(i-1)*(m+1) + j] + gap_score, std::min(dp[i * (m+1) + j-1] + gap_score, dp[(i-1)*(m+1) + j-1] + S));
+      if (dp[i * (m+1) + j] + abs(i - j) < min_score_per_row) min_score_per_row = dp[i * (m+1) + j] + abs(i - j);
+    }
+    if (min_score_per_row > T){
+        score = T + 1;
+        return;
     }
   }
   score = dp[(n+1)*(m+1) - 1];
@@ -212,7 +222,7 @@ void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs,
     int min_cntr;
     for (int j = 0; j < centroids.size(); j++) {
       int score = -1;
-      HaplotypeGenerator::needleman_wunsch(seqs[i], centroids[j], score);
+      HaplotypeGenerator::needleman_wunsch(seqs[i], centroids[j], score, T);
       assert(score != -1);
       if (score < min_score) {
         min_score = score;
@@ -237,7 +247,7 @@ bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_cent
         for (int j = 0; j < new_centroids.size(); j++){
             if (i != j && (clusters.find(new_centroids[i]) != clusters.end()) && (clusters.find(new_centroids[j]) != clusters.end())){
                 int score = -1;
-                HaplotypeGenerator::needleman_wunsch(new_centroids[i], new_centroids[j], score); // Find the edit distance between centroids of two clusters
+                HaplotypeGenerator::needleman_wunsch(new_centroids[i], new_centroids[j], score, T); // Find the edit distance between centroids of two clusters
                 assert(score != -1);
                 if (score < T){
                     updated = true;
