@@ -58,8 +58,8 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
         }
         else{
             *sample_LL_ptr += log(exp(read_LL_ptr[index_1] + log_p1_[read_index] + LOG_ONE_HALF) + exp(read_LL_ptr[index_2] + log_p2_[read_index] + LOG_ONE_HALF));
-            //if (index_1 == 1 && index_2 == 1){
-              //  std::cout << sample_LL_ptr << " " << read_index << " " << read_LL_ptr[index_1] << " " << read_LL_ptr[index_2] << " " << *sample_LL_ptr << std::endl;}
+//            if (index_1 == 3 && index_2 == 4){
+//                std::cout << read_index << " " << x << " " << y << std::endl;}
         }//TODO make this fast
         //assert(*sample_LL_ptr <= TOLERANCE);
       }
@@ -97,6 +97,7 @@ void Genotyper::get_optimal_haplotypes(std::vector< std::pair<int, int> >& gts) 
   double* log_posterior_ptr = log_sample_posteriors_;
   std::vector<double> log_phased_posteriors(num_samples_, -DBL_MAX);
   for (unsigned int sample_index = 0; sample_index < num_samples_; ++sample_index){
+    //std::cout << "ne sample" << std::endl;
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++log_posterior_ptr){
         //std::cout << index_1 << " " << index_2 << " " << *log_posterior_ptr << std::endl;
