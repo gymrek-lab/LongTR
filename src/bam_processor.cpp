@@ -394,72 +394,254 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
 		}
 	}
 
-	for (auto aln_iter = potential_strs.begin(); aln_iter != potential_strs.end(); ++aln_iter){
-		std::string filter = "";
-		if (aln_iter->second.HasTag(ALT_MAP_TAG.c_str())){
-			unique_mapping++;
-			filter = "NO_UNIQUE_MAPPING";
-		}
-		else if (REQUIRE_PAIRED_READS){
-			num_filt_unpaired_reads++;
-			filter = "NO_MATE_PAIR";
-		}
+	int32_t length = alignment.Length();
+	//alignment.TrimLowQualityEnds(BASE_QUAL_TRIM);
+	if (alignment.Position() < region_group.stop() && alignment.GetEndPosition() >= region_group.start())
+	  if ((alignment.Length() == 0) || (alignment.Length() < length/2))
+	    continue;
+      }
+    }
 
-		if (filter.empty()){
-			unpaired_str_alns.push_back(aln_iter->second);
-			write_passing_alignment(aln_iter->second, pass_writer);
-		}
-		else
-			write_filtered_alignment(aln_iter->second, filter, filt_writer);
+    // Clear out mate alignment cache if we've switched to a new file to reduce memory usage
+    // and update the file label for later use
+    if (prev_file.compare(alignment.Filename()) != 0){
+      prev_file = alignment.Filename();
+      potential_mates.clear();
+
+      std::stringstream ss;
+      ss << ++file_index << "_";
+      file_label = ss.str();
+    }
+
+    // Only apply tests to putative STR reads that overlap the STR region
+    if (alignment.Position() < region_group.stop() && alignment.GetEndPosition() >= region_group.start()){
+      bool pass_one = false; // Denotes if read passed first set of simpler filters
+      std::string pass_two(regions.size(), '0'); // Denotes if read passed sceond set of additional filters for each region
+                                                 // Meant to signify if reads that pass first set should be used to generate haplotypes
+      std::string filter = "";
+      read_count++;
+
+      // Ignore reads with N bases
+      if (alignment.QueryBases().find('N') != std::string::npos){
+            read_has_N++;
+            filter.append("HAS_N_BASES");
+      }
+      // Ignore reads with a very low overall base quality score
+      // Want to avoid situations in which it's more advantageous to have misalignments b/c the scores are so low
+      else if (base_quality_.sum_log_prob_correct(alignment.Qualities()) < MIN_SUM_QUAL_LOG_PROB){
+	low_qual_score++;
+	filter.append("LOW_BASE_QUALS");
+      }
+      else if ((REQUIRE_SPANNING == 1) && !spans_a_region(regions, alignment)){
+	not_spanning++;
+	filter.append("NOT_SPANNING");
+      }
+      else
+	pass_one = true;
+
+      if (pass_one){
+	// Determine whether we can use the read for haplotype generation for each region in the group
+	int region_index = 0;
+	for (auto region_iter = regions.begin(); region_iter != regions.end(); ++region_iter, ++region_index){
+	  if ((MIN_FLANK > 0) && (alignment.Position() > (region_iter->start()-MIN_FLANK) || alignment.GetEndPosition() < (region_iter->stop()+MIN_FLANK)))
+	    continue;
+
+	  // Ignore read if there is another location within MAXIMAL_END_MATCH_WINDOW bp for which it has a longer end match
+//	  if (MAXIMAL_END_MATCH_WINDOW > 0){
+//	    bool maximum_end_matches = AlignmentFilters::HasLargestEndMatches(alignment, chrom_seq, 0, MAXIMAL_END_MATCH_WINDOW, MAXIMAL_END_MATCH_WINDOW);
+//	    if (!maximum_end_matches){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
+//	  // Ignore read if it doesn't match perfectly for at least MIN_READ_END_MATCH bases on each end
+//	  if (MIN_READ_END_MATCH > 0){
+//	    std::pair<int,int> match_lens = AlignmentFilters::GetNumEndMatches(alignment, chrom_seq, 0);
+//	    if (match_lens.first < MIN_READ_END_MATCH || match_lens.second < MIN_READ_END_MATCH){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
+//	  // Ignore read if there is an indel within the first MIN_BP_BEFORE_INDEL bps from each end
+//	  if (MIN_BP_BEFORE_INDEL > 0){
+//	    std::pair<int, int> num_bps = AlignmentFilters::GetEndDistToIndel(alignment);
+//	    if ((num_bps.first != -1 && num_bps.first < MIN_BP_BEFORE_INDEL) || (num_bps.second != -1 && num_bps.second < MIN_BP_BEFORE_INDEL)){
+//	      pass_two = std::string(regions.size(), '0');
+//	      break;
+//	    }
+//	  }
+	  pass_two[region_index] = '1';
 	}
-	potential_strs.clear(); potential_mates.clear();
-	selective_logger() << read_count << " reads overlapped region, of which "
-		<< "\n\t" << hard_clip      << " were hard clipped"
-		<< "\n\t" << read_has_N     << " had an 'N' base call"
-		<< "\n\t" << low_qual_score << " had low base quality scores";
-	if (REQUIRE_SPANNING == 1)
-		selective_logger() << "\n\t" << not_spanning << " did not span the STR";
-	selective_logger() << "\n\t" << unique_mapping << " did not have a unique mapping";
-	if (REQUIRE_PAIRED_READS)
-		selective_logger() << "\n\t" << num_filt_unpaired_reads << " did not have a mate pair";
-	selective_logger() << "\n\t" << (paired_str_alns.size()+unpaired_str_alns.size()) << " PASSED ALL FILTERS"  << std::endl;
+      }
 
-	// Separate the reads based on their associated read groups
-	std::map<std::string, int> rg_indices;
-	for (unsigned int type = 0; type < 2; ++type){
-		BamAlnList& aln_src  = (type == 0 ? paired_str_alns : unpaired_str_alns);
-		while (!aln_src.empty()){
-			const BamAlignment& aln = aln_src.back();
-			std::string rg = use_bam_rgs_ ? get_read_group(aln, rg_to_sample): rg_to_sample.find(aln.Filename())->second;
-			int rg_index;
-			auto index_iter = rg_indices.find(rg);
-			if (index_iter == rg_indices.end()){
-				rg_index = rg_indices.size();
-				rg_indices[rg] = rg_index;
-				rg_names.push_back(rg);
-				paired_strs_by_rg.push_back(BamAlnList());
-				unpaired_strs_by_rg.push_back(BamAlnList());
-				mate_pairs_by_rg.push_back(BamAlnList());
-			}
-			else
-				rg_index = index_iter->second;
+      std::string aln_key = file_label + trim_alignment_name(alignment);
+      if (pass_one){
+	add_passes_filters_tag(alignment, pass_two);
+	auto aln_iter = potential_mates.find(aln_key);
+	if (aln_iter != potential_mates.end()){
+	  if (alignment.IsFirstMate() == aln_iter->second.IsFirstMate()){
+	    potential_mates.erase(aln_iter);
+	    potential_strs.insert(std::pair<std::string, BamAlignment>(aln_key, alignment));
+	    continue;
+	  }
 
-			// Record STR read and its mate pair
-			if (type == 0){
-				paired_strs_by_rg[rg_index].push_back(aln);
-				mate_pairs_by_rg[rg_index].push_back(mate_alns.back());
-				mate_alns.pop_back();
-			}
-			// Record unpaired STR read
-			else
-				unpaired_strs_by_rg[rg_index].push_back(aln);
-			aln_src.pop_back();
-		}
+	  std::vector< std::pair<std::string, int32_t> > p_1, p_2;
+	  get_valid_pairings(alignment, aln_iter->second, p_1, p_2);
+	  if (p_1.size() == 1 && p_1[0].second == alignment.Position()){
+	    paired_str_alns.push_back(alignment);
+	    mate_alns.push_back(aln_iter->second);
+	    write_passing_alignment(alignment, pass_writer);
+	    write_passing_alignment(aln_iter->second, pass_writer);
+	  }
+	  else {
+	    unique_mapping++;
+	    filter.append("NO_UNIQUE_MAPPING");
+	    write_filtered_alignment(alignment, filter, filt_writer);
+	  }
+	  potential_mates.erase(aln_iter);
 	}
-    potential_strs.clear(); potential_mates.clear();
-	locus_read_filter_time_  = (clock() - locus_read_filter_time_)/CLOCKS_PER_SEC;
-	total_read_filter_time_ += locus_read_filter_time_;
-	//std::cout << "1: "<< loop_start_1_total << " 2: " << loop_start_2_total << " 3: " << loop_start_3_total << " 4: " << loop_start_4_total << " 5: " << loop_start_5_total << " 6: " << loop_start_6_total << " 7: " << loop_start_7_total << " 8: " << loop_start_8_total << std::endl;
+	else {
+	  //auto str_iter = potential_strs.find(aln_key); // I don't think this is needed.
+	  auto str_iter = potential_strs.end();
+	  if (str_iter != potential_strs.end()){
+	    if (alignment.IsFirstMate() == str_iter->second.IsFirstMate()){
+	      read_count--;
+	      continue;
+	    }
+
+	    std::vector< std::pair<std::string, int32_t> > p_1, p_2;
+	    get_valid_pairings(alignment, str_iter->second, p_1, p_2);
+	    if (p_1.size() == 1 && p_1[0].second == alignment.Position()){
+	      paired_str_alns.push_back(alignment);
+	      mate_alns.push_back(str_iter->second);
+	      write_passing_alignment(alignment, pass_writer);
+
+	      paired_str_alns.push_back(str_iter->second);
+	      mate_alns.push_back(alignment);
+	      write_passing_alignment(str_iter->second, pass_writer);
+	    }
+	    else {
+	      unique_mapping += 2;
+	      std::string filter = "NO_UNIQUE_MAPPING";
+	      write_filtered_alignment(alignment, filter, filt_writer);
+	      write_filtered_alignment(str_iter->second, filter, filt_writer);
+	    }
+	    potential_strs.erase(str_iter);
+	  }
+	  else
+	    potential_strs.insert(std::pair<std::string, BamAlignment>(aln_key, alignment));
+	}
+      }
+      else {
+	assert(!filter.empty());
+	write_filtered_alignment(alignment, filter, filt_writer);
+	potential_mates.insert(std::pair<std::string, BamAlignment>(aln_key, alignment));
+      }
+    }
+    else {
+      std::string aln_key = file_label + trim_alignment_name(alignment);
+      auto aln_iter = potential_strs.find(aln_key);
+      if (aln_iter != potential_strs.end()){
+	if (alignment.IsFirstMate() == aln_iter->second.IsFirstMate())
+	  continue;
+
+	std::vector< std::pair<std::string, int32_t> > p_1, p_2;
+	get_valid_pairings(aln_iter->second, alignment, p_1, p_2);
+	if (p_1.size() == 1 && p_1[0].second == aln_iter->second.Position()){
+	  paired_str_alns.push_back(aln_iter->second);
+	  mate_alns.push_back(alignment);
+	  write_passing_alignment(aln_iter->second, pass_writer);
+	  write_passing_alignment(alignment, pass_writer);
+	}
+	else {
+	  unique_mapping++;
+	  std::string filter = "NO_UNIQUE_MAPPING";
+	  write_filtered_alignment(aln_iter->second, filter, filt_writer);
+	}
+	potential_strs.erase(aln_iter);
+      }
+      else {
+	auto other_iter = potential_mates.find(aln_key);
+	if (other_iter != potential_mates.end()){
+	  if (alignment.IsFirstMate() == other_iter->second.IsFirstMate())
+	    continue;
+	  potential_mates.erase(other_iter);
+	}
+	else
+	  potential_mates.insert(std::pair<std::string, BamAlignment>(aln_key, alignment));
+      }
+    }
+  }
+
+  for (auto aln_iter = potential_strs.begin(); aln_iter != potential_strs.end(); ++aln_iter){
+    std::string filter = "";
+    if (aln_iter->second.HasTag(ALT_MAP_TAG.c_str())){
+      unique_mapping++;
+      filter = "NO_UNIQUE_MAPPING";
+    }
+    else if (REQUIRE_PAIRED_READS){
+      num_filt_unpaired_reads++;
+      filter = "NO_MATE_PAIR";
+    }
+
+    if (filter.empty()){
+      unpaired_str_alns.push_back(aln_iter->second);
+      write_passing_alignment(aln_iter->second, pass_writer);
+    }
+    else
+      write_filtered_alignment(aln_iter->second, filter, filt_writer);
+  }
+  potential_strs.clear(); potential_mates.clear();
+  
+  selective_logger() << read_count << " reads overlapped region, of which "
+		     << "\n\t" << hard_clip      << " were hard clipped"
+		     << "\n\t" << read_has_N     << " had an 'N' base call"
+		     << "\n\t" << low_qual_score << " had low base quality scores";
+  if (REQUIRE_SPANNING == 1)
+    selective_logger() << "\n\t" << not_spanning << " did not span the STR";
+  selective_logger() << "\n\t" << unique_mapping << " did not have a unique mapping";
+  if (REQUIRE_PAIRED_READS)
+    selective_logger() << "\n\t" << num_filt_unpaired_reads << " did not have a mate pair";
+  selective_logger() << "\n\t" << (paired_str_alns.size()+unpaired_str_alns.size()) << " PASSED ALL FILTERS"  << std::endl;
+
+  // Separate the reads based on their associated read groups
+  std::map<std::string, int> rg_indices;
+  for (unsigned int type = 0; type < 2; ++type){
+    BamAlnList& aln_src  = (type == 0 ? paired_str_alns : unpaired_str_alns);
+    while (!aln_src.empty()){
+      const BamAlignment& aln = aln_src.back();
+      std::string rg = use_bam_rgs_ ? get_read_group(aln, rg_to_sample): rg_to_sample.find(aln.Filename())->second;
+      int rg_index;
+      auto index_iter = rg_indices.find(rg);
+      if (index_iter == rg_indices.end()){
+	rg_index = rg_indices.size();
+	rg_indices[rg] = rg_index;
+	rg_names.push_back(rg);
+	paired_strs_by_rg.push_back(BamAlnList());
+	unpaired_strs_by_rg.push_back(BamAlnList());
+	mate_pairs_by_rg.push_back(BamAlnList());
+      }
+      else
+	rg_index = index_iter->second;
+
+      // Record STR read and its mate pair
+      if (type == 0){
+	paired_strs_by_rg[rg_index].push_back(aln);
+	mate_pairs_by_rg[rg_index].push_back(mate_alns.back());
+	mate_alns.pop_back();
+      }
+      // Record unpaired STR read
+      else
+	unpaired_strs_by_rg[rg_index].push_back(aln);
+      aln_src.pop_back();
+    }
+  }
+
+  locus_read_filter_time_  = (clock() - locus_read_filter_time_)/CLOCKS_PER_SEC;
+  total_read_filter_time_ += locus_read_filter_time_;
+		}
+
+
 }
 
 // Ensure that all of the chromosomes are present in i) the FASTA file, ii) the BAM files and iii) the SNP VCF file, if provided

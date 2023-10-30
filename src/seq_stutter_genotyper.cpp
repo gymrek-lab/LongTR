@@ -140,7 +140,6 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 									realign_sample[sample_index] = false;
 								}
 								else {
-									//logger << sample_names_[sample_index] << " " << total_depth << " " << assembly_data[i].second << std::endl;
 									if (haplotype_indexes.find(assembly_data[i].first) == haplotype_indexes.end()){
 										int index = haplotype_indexes.size();
 										haplotype_indexes[assembly_data[i].first] = index;
@@ -954,7 +953,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<int> old_to_new, new_to_old;
 	reorder_alleles(alleles, old_to_new, new_to_old);
 
-	// Print the allele count information
+	 Print the allele count information
 	logger << "Allele counts" << std::endl;
 	for (unsigned int i = 0; i < alleles.size(); i++)
 		logger << "\t" << alleles[new_to_old[i]] << " " << allele_counts[new_to_old[i]] << std::endl;
