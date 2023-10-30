@@ -208,7 +208,7 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
     }
   }
   score = dp[(n)*(m+1) + m];
-  delete [] dp;
+  //delete [] dp;
 }
 
 // Clustering reads based on the similarity between them. The similarity is computed based on edit distance.
