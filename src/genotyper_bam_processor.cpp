@@ -51,7 +51,7 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
     filt_log_p2.push_back(std::vector<double>());
     for (unsigned int j = 0; j < alignments[i].size(); ++j, ++total_reads){
       // Discard read if it doesn't entirely overlap with the repeat
-      if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) continue;
+      //if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) continue;
       // Trim alignment if it extends very far upstream or downstream of the STR. For tractability, we limit it to 200bp
       alignments[i][j].TrimAlignment((region_group.start() > FLANK_SIZE ? region_group.start()-FLANK_SIZE : 1), region_group.stop()+FLANK_SIZE);
       if (alignments[i][j].Length() == 0){ // if string is deleted, add it as a deleted alignment
