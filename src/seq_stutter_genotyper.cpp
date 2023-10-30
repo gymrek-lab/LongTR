@@ -953,10 +953,10 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<int> old_to_new, new_to_old;
 	reorder_alleles(alleles, old_to_new, new_to_old);
 
-	// Print the allele count information
-	//logger << "Allele counts" << std::endl;
-	//for (unsigned int i = 0; i < alleles.size(); i++)
-	//	logger << "\t" << alleles[new_to_old[i]] << " " << allele_counts[new_to_old[i]] << std::endl;
+	 Print the allele count information
+	logger << "Allele counts" << std::endl;
+	for (unsigned int i = 0; i < alleles.size(); i++)
+		logger << "\t" << alleles[new_to_old[i]] << " " << allele_counts[new_to_old[i]] << std::endl;
 
     // Form inexact allele sequence
 
