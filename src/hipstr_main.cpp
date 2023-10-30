@@ -30,7 +30,7 @@ bool is_file(const std::string& name){
 }
 
 void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len, int def_switch_old_align_len){
-  std::cerr << "Usage: HipSTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --tr-vcf <tr_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
+  std::cerr << "Usage: LongTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --tr-vcf <tr_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
     
 	    << "Required parameters:" << "\n"
 	    << "\t" << "--bams          <list_of_bams>        "  << "\t" << "Comma separated list of BAM/CRAM files. Either --bams or --bam-files must be specified"   << "\n"
@@ -91,7 +91,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 
 	    << "Other optional parameters:" << "\n"
 	    << "\t" << "--help                                "  << "\t" << "Print this help message and exit"                                                     << "\n"
-	    << "\t" << "--version                             "  << "\t" << "Print HipSTR version and exit"                                                        << "\n"
+	    << "\t" << "--version                             "  << "\t" << "Print LongTR version and exit"                                                        << "\n"
 	    << "\t" << "--quiet                               "  << "\t" << "Only output terse logging messages (Default = output all messages)"                   << "\n"
 	    << "\t" << "--silent                              "  << "\t" << "Don't output any logging messages  (Default = output all messages)"                   << "\n"
 	    //<< "\t" << "--def-stutter-model                   "  << "\t" << "For each locus, use a stutter model with PGEOM=0.9 and UP=DOWN=0.05 for in-frame"     << "\n"
@@ -340,12 +340,12 @@ void parse_command_line_args(int argc, char** argv,
     msg << "Did not recognize the following command line arguments:" << "\n";
     while (optind < argc)
       msg << "\t" << argv[optind++] << "\n";
-    msg << "Please check your command line syntax or type ./HipSTR --help for additional information" << "\n";
+    msg << "Please check your command line syntax or type ./LongTR--help for additional information" << "\n";
     printErrorAndDie(msg.str());
   }
 
   if (print_version == 1){
-    std::cerr << "HipSTR version " << VERSION << std::endl;
+    std::cerr << "LongTR version " << VERSION << std::endl;
     exit(0);
   }
   if (print_help){
@@ -397,8 +397,7 @@ int main(int argc, char** argv){
     printErrorAndDie("You can only specify one of the --bams or --bam-files options");
   else if (region_file.empty()){
     std::stringstream err;
-    err << "--regions option required" << "\n"
-	<< "\tVisit https://github.com/HipSTR-Tool/HipSTR-references to view premade region files available for various model organisms";
+    err << "--regions option required" << "\n";
     printErrorAndDie(err.str());
   }
   else if (fasta_file.empty())
@@ -509,7 +508,7 @@ int main(int argc, char** argv){
 
     // Check that tabix index exists
     if (!file_exists(ref_vcf_file + ".tbi"))
-	printErrorAndDie("No .tbi index found for the ref VCF file. Please index using tabix and rerun HipSTR");
+	printErrorAndDie("No .tbi index found for the ref VCF file. Please index using tabix and rerun LongTR");
 
     bam_processor.set_ref_vcf(ref_vcf_file);
   }
@@ -524,7 +523,7 @@ int main(int argc, char** argv){
 
     // Check that tabix index exists
     if (!file_exists(snp_vcf_file + ".tbi"))
-	printErrorAndDie("No .tbi index found for the SNP VCF file. Please index using tabix and rerun HipSTR");
+	printErrorAndDie("No .tbi index found for the SNP VCF file. Please index using tabix and rerun LongTR");
 
     bam_processor.set_input_snp_vcf(snp_vcf_file);
   }
@@ -578,7 +577,7 @@ int main(int argc, char** argv){
 
 
   total_time = (clock() - total_time)/CLOCKS_PER_SEC;
-  bam_processor.full_logger() << "HipSTR execution finished: Total runtime = " << total_time << " sec" << "\n"
+  bam_processor.full_logger() << "LongTR execution finished: Total runtime = " << total_time << " sec" << "\n"
 			      << "-----------------\n\n" << std::endl;
   return 0;  
 }
