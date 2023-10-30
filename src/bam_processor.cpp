@@ -263,8 +263,8 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
 
       // Ignore reads with N bases
       if (alignment.QueryBases().find('N') != std::string::npos){
-	read_has_N++;
-	filter.append("HAS_N_BASES");
+            read_has_N++;
+            filter.append("HAS_N_BASES");
       }
       // Ignore reads with a very low overall base quality score
       // Want to avoid situations in which it's more advantageous to have misalignments b/c the scores are so low
