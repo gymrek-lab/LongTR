@@ -1049,12 +1049,12 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	// Add FORMAT field
 	int num_fields;
 	if (!haploid_){
-		out << "\tGT:GB:Q:PQ:DP:DSNP:DSTUTTER:DFLANKINDEL:PDP:PSNP:GLDIFF";
-		num_fields = 11;
+		out << "\tGT:GB:Q:PQ:DP:DSNP:DFLANKINDEL:PDP:PSNP:GLDIFF";
+		num_fields = 10;
 	}
 	else {
-		out << "\tGT:GB:Q:DP:DSTUTTER:DFLANKINDEL:GLDIFF";
-		num_fields = 7;
+		out << "\tGT:GB:Q:DP:DFLANKINDEL:GLDIFF";
+		num_fields = 6;
 	}
 	if (output_allele_bias)    out << ":AB:DAB";
 	if (output_strand_bias)    out << ":FS";
@@ -1140,7 +1140,6 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 				<< ":" << exp(log_phased_posteriors[sample_index])                                        // Phased posterior
 				<< ":" << num_aligned_reads[sample_index]                                                 // Total reads used to genotype (after filtering)
 				<< ":" << num_reads_with_snps[sample_index]                                               // Total reads with SNP information
-				<< ":" << num_reads_with_stutter[sample_index]                                            // Total reads with a non-zero stutter artifact in ML alignment
 				<< ":" << num_reads_with_flank_indels[sample_index]                                       // Total reads with an indel in flank in ML alignment
 				<< ":" << phase1_reads << "|" << phase2_reads                                             // Reads per allele
 				<< ":" << num_reads_strand_one[sample_index] << "|" << num_reads_strand_two[sample_index]; // Reads with SNPs supporting each haploid genotype
@@ -1156,7 +1155,6 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 				<< ":" << allele_bp_diffs[gts[sample_index].first]                                        // Base pair differences from reference
 				<< ":" << exp(log_unphased_posteriors[sample_index])                                      // Unphased posterior
 				<< ":" << num_aligned_reads[sample_index]                                                 // Total reads used to genotype (after filtering)
-				<< ":" << num_reads_with_stutter[sample_index]                                            // Total reads with a non-zero stutter artifact in ML alignment
 				<< ":" << num_reads_with_flank_indels[sample_index];                                      // Total reads with an indel in flank in ML alignment
 
 			// Difference in GL between the current and next best genotype

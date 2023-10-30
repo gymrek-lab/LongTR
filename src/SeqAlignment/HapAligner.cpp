@@ -238,20 +238,20 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   // Initialize first row of matrix (each base position matched with leftmost haplotype base)
   left_prob = 0.0;
-  char first_hap_base = haplotype->get_first_char();
   std::string read_seq = seq_0;
   if (haplotype->get_seq().size() <= 60){ //TODO, it usually happens in case of big deletions
     left_prob = IMPOSSIBLE;
     return;
   }
-  int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
+  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
   std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
-
+  if (std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size())) > 100){
+    left_prob = -std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size()))*5.0/100.0;
+    //std::cout << "halignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
+    return;
+  }
   int n = haplotype_seq.size();
   int m = read_seq.size();
-//  double match_matrix_[n][m];
-//  double deletion_matrix_[n][m];
-//  double insert_matrix_[n][m];
 
    if (abs(n - m) > 600){
     left_prob = -700;
@@ -527,6 +527,7 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
 			       double* aln_probs, int* seed_positions){
   assert(alignments.size() == realign_read.size());
   AlignmentTrace trace(fw_haplotype_->num_blocks());
+  std::vector<std::pair<std::string,double>> seen_alignment;
   double* prob_ptr = aln_probs + (init_read_index*fw_haplotype_->num_combs());
   int short_ = 0;
   if (fw_haplotype_->get_block(1)->get_repeat_info()->get_period() == 1 && fw_haplotype_->get_block(1)->get_seq(0).size() < SWITCH_OLD_ALIGN_LEN){
@@ -822,22 +823,15 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
           reuse_alns = false;
           continue;
         }
+        double prob;
         // Perform alignment to current haplotype
-        double l_prob, r_prob;
-        int max_index;
-
-        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, l_prob);
-        double LL = l_prob;
-        *prob_ptr = LL;
+        align_seq_to_hap(fw_haplotype_, reuse_alns, base_seq, seed_base, prob);
+        *prob_ptr =  prob;
         prob_ptr++;
         reuse_alns = true;
-
-        if (LL > max_LL){
-          max_LL = LL;
-    }
-      } while (fw_haplotype_->next() && rev_haplotype_->next());
-      fw_haplotype_->reset();
-      rev_haplotype_->reset();
+    } while (fw_haplotype_->next() && rev_haplotype_->next());
+    fw_haplotype_->reset();
+    rev_haplotype_->reset();
   }
   else{
   assert(seed_base != -1);

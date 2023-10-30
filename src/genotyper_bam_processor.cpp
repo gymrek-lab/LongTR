@@ -311,17 +311,17 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
       assert(seq_genotyper != NULL);
       selective_logger() << "\t" << "Trim alignment        = "  << locus_left_aln_time_             << " seconds\n"
 			 << "\t" << " Haplotype generation  = "  << seq_genotyper->hap_build_time()  << " seconds\n"
-			 << "\t" << " Haplotype alignment   = "  << seq_genotyper->hap_aln_time()    << " seconds\n"
-			 << "\t" << " Flank assembly        = "  << seq_genotyper->assembly_time()   << " seconds\n"
-			 << "\t" << " Posterior computation = "  << seq_genotyper->posterior_time()  << " seconds\n"
-			 << "\t" << " Alignment traceback   = "  << seq_genotyper->aln_trace_time()  << " seconds\n";
+			 << "\t" << " Haplotype alignment   = "  << seq_genotyper->hap_aln_time()    << " seconds\n";
+//			 << "\t" << " Flank assembly        = "  << seq_genotyper->assembly_time()   << " seconds\n"
+//			 << "\t" << " Posterior computation = "  << seq_genotyper->posterior_time()  << " seconds\n"
+//			 << "\t" << " Alignment traceback   = "  << seq_genotyper->aln_trace_time()  << " seconds\n";
 
       process_timer_.add_time("Trimming alignment",        locus_left_aln_time_);
       process_timer_.add_time("Haplotype generation",  seq_genotyper->hap_build_time());
       process_timer_.add_time("Haplotype alignment",   seq_genotyper->hap_aln_time());
-      process_timer_.add_time("Flank assembly",        seq_genotyper->assembly_time());
-      process_timer_.add_time("Posterior computation", seq_genotyper->posterior_time());
-      process_timer_.add_time("Alignment traceback",   seq_genotyper->aln_trace_time());
+      //process_timer_.add_time("Flank assembly",        seq_genotyper->assembly_time());
+      //process_timer_.add_time("Posterior computation", seq_genotyper->posterior_time());
+      //process_timer_.add_time("Alignment traceback",   seq_genotyper->aln_trace_time());
     }
   }
 

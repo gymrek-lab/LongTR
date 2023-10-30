@@ -6,7 +6,9 @@
 #include "AlignmentModel.h"
 
 // Obtained from Dindel source code v 1.01
+
 double dindel_probs[10] = {2.9e-5, 2.9e-5, 2.9e-5, 2.9e-5, 4.3e-5, 1.1e-4, 2.4e-4, 5.7e-4, 1.0e-3, 1.4e-3};
+
 
 //double LOG_MATCH_TO_MATCH[MAX_HOMOP_LEN+1];
 //double LOG_MATCH_TO_INS[MAX_HOMOP_LEN+1];
@@ -19,6 +21,7 @@ double dindel_probs[10] = {2.9e-5, 2.9e-5, 2.9e-5, 2.9e-5, 4.3e-5, 1.1e-4, 2.4e-
  */
 void init_alignment_model(){
   // Values won't be used anyways as homopolymer length >= 1
+
 //  LOG_MATCH_TO_INS[0]   = 0;
 //  LOG_MATCH_TO_DEL[0]   = 0;
 //  LOG_MATCH_TO_MATCH[0] = 0;

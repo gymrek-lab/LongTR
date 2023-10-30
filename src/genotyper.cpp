@@ -71,9 +71,9 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
     //assert(sample_total_LL <= TOLERANCE);
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-      //std::cout << "before " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
-	*sample_LL_ptr -= sample_total_LL;
-	//std::cout << "final " << *sample_LL_ptr << std::endl;
+        //std::cout << "before " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
+	    *sample_LL_ptr -= sample_total_LL;
+	    //std::cout << "final " << *sample_LL_ptr << std::endl;
 	}
   }
 
