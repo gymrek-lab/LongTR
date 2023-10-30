@@ -37,7 +37,7 @@ OBJ_SEQALN  := $(SRC_SEQALN:.cpp=.o)
 OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
 
 .PHONY: all
-all: HTSLIB-docker SPOA-docker HipSTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
+all:SPOA-docker HTSLIB-docker  LongTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
 
 # Create a tarball with static binaries
 .PHONY: static-dist
@@ -60,7 +60,7 @@ version:
 # Clean the generated files of the main project only
 .PHONY: clean
 clean:
-	rm -f *~ src/*.o src/*.d src/*~ src/SeqAlignment/*~ src/SeqAlignment/*.o src/denovos/*~ src/denovos/*.o HipSTR DenovoFinder test/allele_expansion_test test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
+	rm -f *~ src/*.o src/*.d src/*~ src/SeqAlignment/*~ src/SeqAlignment/*.o src/denovos/*~ src/denovos/*.o LongTR DenovoFinder test/allele_expansion_test test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
 
 # Clean all compiled files
 .PHONY: clean-all
@@ -111,7 +111,7 @@ SPOA-docker: SPOA-update
 		cd lib/spoa/build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	fi
 
-HipSTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
+LongTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
 	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LIBS)
 
 DenovoFinder: $(OBJ_DENOVO) $(HTSLIB_LIB)
