@@ -4,7 +4,7 @@ The repository is a modified version of the [HipSTR](https://github.com/HipSTR-T
 # LongTR
 
 ## Requirements 
-gcc 7+ | clang 4+
+gcc 7+
 
 cmake 3.12+
 
