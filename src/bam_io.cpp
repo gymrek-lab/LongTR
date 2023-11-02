@@ -108,6 +108,8 @@ BamCramReader::BamCramReader(const std::string& path, std::string fasta_path)
 }
 
 BamCramReader::~BamCramReader(){
+
+
     bam_hdr_destroy(hdr_);
     delete header_;
     sam_close(in_);

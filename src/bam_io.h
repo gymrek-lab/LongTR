@@ -554,9 +554,8 @@ class BamCramMultiReader {
 
   ~BamCramMultiReader(){
     delete multi_header_;
-//    std::cout << bam_readers_.size() << std::endl;
-//    for (size_t i = 0; i < bam_readers_.size(); i++)
-//      delete bam_readers_[i];
+    for (size_t i = 0; i < bam_readers_.size(); i++)
+      delete bam_readers_[i];
   }
 
   int get_merge_type() const { return merge_type_; }
