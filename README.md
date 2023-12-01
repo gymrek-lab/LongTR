@@ -11,11 +11,11 @@ cmake 3.12+
 ## Installation
 To obtain LongTR, use:
 
-	git clone git@github.com:gymrek-lab/LongSTR.git
+	git clone git@github.com:gymrek-lab/LongTR.git
 
 To build, use Make:
 
-    cd LongSTR
+    cd LongTR
     make
 
 The commands will construct an executable file called **LongTR** in the current directory, for which you can view detailed help information by typing 
