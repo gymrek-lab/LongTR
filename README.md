@@ -8,6 +8,11 @@ gcc 7+
 
 cmake 3.12+
 
+LongTR relies on [spoa](https://github.com/rvaser/spoa) and [HTSLIB](https://github.com/samtools/htslib). These dependencies will be automatically downloaded and installed during the setup process. To ensure a successful installation, please ensure that the following dependencies are already installed on your system:
+
+google/googletest 1.10.0
+[zlib](https://zlib.net/)
+
 ## Installation
 To obtain LongTR, use:
 
@@ -191,4 +196,5 @@ GL        | log-10 genotype likelihoods
 PL        | Phred-scaled genotype likelihoods
 
 ## Citation
-TODO
+
+Please cite our [preprint](https://www.biorxiv.org/content/10.1101/2024.01.20.576266v1) when using LongTR for your publications.
