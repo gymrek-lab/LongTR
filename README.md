@@ -51,6 +51,10 @@ When executing the tool on a PacBio HiFi dataset, the following parameters are r
 * **min-sum-qual** : Threshold for quality of read which is based on Illumina 1.8 Phred+33 quality score system
 * **max-tr-len** : Maximum length of TR that will be genotyped by LongTR (Default 1000)
 * **min-reads** : Minimum total reads required to genotype a locus (Default = 10)
+  
+Additional parameters:
+
+* **--stutter-align-len** <threshold>: Switch to the alignment with error modeling, only for homopolymers with a length shorter than the specified threshold. 
 
 For each region in *tr_regions.bed*, **LongTR** will output the resulting TR genotypes to *tr_calls.vcf.gz*, a [bgzipped](http://www.htslib.org/doc/tabix.html) [VCF](#str-vcf) file. This VCF will contain calls for each sample in any of the BAM/CRAM files' read groups.
 
