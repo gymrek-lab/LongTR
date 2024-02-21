@@ -51,7 +51,10 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
     filt_log_p2.push_back(std::vector<double>());
     for (unsigned int j = 0; j < alignments[i].size(); ++j, ++total_reads){
       // Discard read if it doesn't entirely overlap with the repeat
-      //if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) continue;
+      if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) {
+        align_fail_count++;
+        continue;
+      }
       // Trim alignment if it extends very far upstream or downstream of the STR. For tractability, we limit it to 200bp
       alignments[i][j].TrimAlignment((region_group.start() > FLANK_SIZE ? region_group.start()-FLANK_SIZE : 1), region_group.stop()+FLANK_SIZE);
       if (alignments[i][j].Length() == 0){ // if string is deleted, add it as a deleted alignment
@@ -281,7 +284,6 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
 					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
     if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
       bool pass = true;
-
       // If appropriate, recalculate the stutter model using the haplotype ML alignments,
       // realign the reads and regenotype the samples
 //      if (recalc_stutter_model_)
