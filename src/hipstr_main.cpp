@@ -203,7 +203,7 @@ void parse_command_line_args(int argc, char** argv,
   std::string filename;
   while (true){
     int option_index = 0;
-    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:L:", long_options, &option_index);
+    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:O:L", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -323,6 +323,7 @@ void parse_command_line_args(int argc, char** argv,
 	break;
 	case 'L':
 	bam_processor.INDEL_FLANK_LEN = atof(optarg);
+	break;
 	case 'O':
 	bam_processor.SWITCH_OLD_ALIGN_LEN = atof(optarg);
 	break;
