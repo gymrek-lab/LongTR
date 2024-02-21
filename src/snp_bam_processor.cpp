@@ -182,13 +182,14 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
 	  }
     }
     // check if we have enough reads from each haplotype
-    double haplotype_1_frac = ((double)haplotype_1_reads / (double)total_reads);
-    double haplotype_2_frac = ((double)haplotype_2_reads / (double)total_reads);
-    //std::cout << haplotype_1_reads << " " << rg_names[i] << " " << haplotype_2_reads << " " << std::endl;
-    if ( ((haplotype_1_frac < 0.25) && haplotype_1_reads < 10)  || ((haplotype_2_frac < 0.25) && haplotype_2_reads < 10)){
-        not_enough_phased_reads = true;
+    //double haplotype_1_frac = ((double)haplotype_1_reads / (double)total_reads);
+    //double haplotype_2_frac = ((double)haplotype_2_reads / (double)total_reads);
+    double unphased_frac = (double)(total_reads - (haplotype_1_reads + haplotype_2_reads)) / (double)total_reads;
 
-        selective_logger() << "Skipping phasing information for sample " << rg_names[i] << " as there was not enough phased reads from both haplotypes." << std::endl;
+    //std::cout << haplotype_1_reads << " " << rg_names[i] << " " << haplotype_2_reads << " " << std::endl;
+    if (unphased_frac > 0.2 || haplotype_2_reads <= 1 || haplotype_1_reads <= 1){
+        not_enough_phased_reads = true;
+        selective_logger() << "Skipping phasing information for sample " << rg_names[i] << " as there was many unphased reads." << std::endl;
     }
 
     for (unsigned int j = 0; j < paired_strs_by_rg[i].size(); j++){
