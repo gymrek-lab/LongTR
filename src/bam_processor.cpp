@@ -176,9 +176,9 @@ bool BamProcessor::spans_a_region(const std::vector<Region>& regions, BamAlignme
   for (auto region_iter = regions.begin(); region_iter != regions.end(); region_iter++){
     if (alignment.Position() > region_iter->stop() || alignment.GetEndPosition() < region_iter->start())
       continue;
-    if (alignment.Position() > region_iter->start() && !alignment.StartsWithSoftClip())
+    if (alignment.Position() > region_iter->start())
       continue;
-    if (alignment.GetEndPosition() < region_iter->stop() && !alignment.EndsWithSoftClip())
+    if (alignment.GetEndPosition() < region_iter->stop())
       continue;
     return true;
   }
@@ -260,7 +260,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
                                                  // Meant to signify if reads that pass first set should be used to generate haplotypes
       std::string filter = "";
       read_count++;
-
+        //std::cout << "hi " << base_quality_.sum_log_prob_correct(alignment.Qualities()) << std::endl;
       // Ignore reads with N bases
       if (alignment.QueryBases().find('N') != std::string::npos){
             read_has_N++;
