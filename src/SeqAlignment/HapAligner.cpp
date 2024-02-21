@@ -245,16 +245,12 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   }
   const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
   std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
-  if (std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size())) > 100){
-    left_prob = -std::abs(static_cast<int>(haplotype_seq.size() - read_seq.size()))*5.0/100.0;
-    //std::cout << "halignment of sequence with size " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
-    return;
-  }
   int n = haplotype_seq.size();
   int m = read_seq.size();
 
    if (abs(n - m) > 600){
     left_prob = -700;
+    //std::cout << "alignment of sequence with ssize " << " " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
     return;
    }
 
@@ -302,9 +298,8 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 						   deletion_matrix[i * m + j - 1] + LOG_DEL_TO_DEL);
 
 	  double best_value_here = std::max(deletion_matrix[i * m + j], std::max(insertion_matrix[i * m + j], match_matrix[i * m + j]));
-	  if (best_value_here + abs(i - j) * LOG_DEL_TO_DEL > max_score_per_row) max_score_per_row = best_value_here + abs(i - j) * LOG_DEL_TO_DEL;
+	  if (best_value_here + abs((n - m) - (i - j)) * LOG_DEL_TO_DEL > max_score_per_row) max_score_per_row = best_value_here + abs((n - m) - (i - j)) * LOG_DEL_TO_DEL;
     }
-
     if (max_score_per_row < -600){
         left_prob = -700;
         //std::cout << "alignment of sequence with ssize " << " " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
@@ -316,7 +311,6 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
  }
 
  left_prob = std::max(deletion_matrix[n * m - 1], std::max(insertion_matrix[n * m - 1], match_matrix[n * m - 1]));
- //if ((read_seq.size() == 127 && haplotype_seq.size() == 127)  || (read_seq.size() == 152 && haplotype_seq.size() == 152))
  //std::cout << "alignment of sequence with ssize " << " " << read_seq.size() << " to haplotype with size " << haplotype_seq.size() << " with l_prob " << left_prob << std::endl;
  delete [] match_matrix;
  delete [] insertion_matrix;
@@ -530,8 +524,8 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
   std::vector<std::pair<std::string,double>> seen_alignment;
   double* prob_ptr = aln_probs + (init_read_index*fw_haplotype_->num_combs());
   int short_ = 0;
-  if (fw_haplotype_->get_block(1)->get_repeat_info()->get_period() == 1 && fw_haplotype_->get_block(1)->get_seq(0).size() < SWITCH_OLD_ALIGN_LEN){
-    std::cout << "switched to old alignment" << std::endl;
+  if (fw_haplotype_->get_block(1)->get_repeat_info()->get_period() == 1 && SWITCH_OLD_ALIGN_LEN){
+    //std::cout << "Switched to old alignment" << std::endl;
     short_ = 1;
     }
   for (unsigned int i = 0; i < alignments.size(); i++){
@@ -551,7 +545,7 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
         if (seed_base == -1){
           // Assign all haplotypes the same zero LL
           for (unsigned int i = 0; i < fw_haplotype_->num_combs(); ++i, ++prob_ptr)
-        *prob_ptr = 0;
+                *prob_ptr = 0;
         }
         else {
           process_read(alignments[i], seed_base, base_quality, false, prob_ptr, trace, short_);
@@ -829,9 +823,8 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
         *prob_ptr =  prob;
         prob_ptr++;
         reuse_alns = true;
-    } while (fw_haplotype_->next() && rev_haplotype_->next());
+    } while (fw_haplotype_->next());
     fw_haplotype_->reset();
-    rev_haplotype_->reset();
   }
   else{
   assert(seed_base != -1);
@@ -970,4 +963,15 @@ void HapAligner::process_read(const Alignment& aln, int seed_base, const BaseQua
   delete [] base_log_correct;
   }
 }
-
+AlignmentTrace* HapAligner::trace_optimal_aln(const Alignment& orig_aln, int seed_base, int best_haplotype, const BaseQuality* base_quality){
+  fw_haplotype_->go_to(best_haplotype);
+  fw_haplotype_->fix();
+  rev_haplotype_->go_to(best_haplotype);
+  fw_haplotype_->fix();
+  double prob;
+  AlignmentTrace* trace = new AlignmentTrace(fw_haplotype_->num_blocks());
+  process_read(orig_aln, seed_base, base_quality, true, &prob, *trace, 1);
+  fw_haplotype_->unfix();
+  rev_haplotype_->unfix();
+  return trace;
+}
