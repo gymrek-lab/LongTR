@@ -41,9 +41,9 @@ class HaplotypeGenerator {
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score, int T) const;
 
-  void greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters) const;
+  bool greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters, int t) const;
 
-  bool merge_clusters(const std::vector<std::string>& new_centeroids, std::map<std::string, std::vector<std::string>>& clusters) const;
+  bool merge_clusters(const std::vector<std::string>& new_centeroids, std::map<std::string, std::vector<std::string>>& clusters, int t) const;
 
   void gen_candidate_seqs(const std::string& ref_seq, int ideal_min_length,
 			  const std::vector< std::vector<Alignment> >& alignments, const std::vector<std::string>& vcf_alleles,

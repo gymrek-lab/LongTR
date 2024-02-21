@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <random>
 
 #include "spoa/spoa.hpp"
 #include "HaplotypeGenerator.h"
@@ -167,13 +168,34 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
     std::unique_ptr<spoa::AlignmentEngine> alignment_engine;
     alignment_engine =spoa::AlignmentEngine::Create(static_cast<spoa::AlignmentType>(1),(std::int8_t) 1, (std::int8_t) -1,(std::int8_t) -1);
     spoa::Graph graph{};
-    for (const auto& seq: seqs) {
+    int cluster_size_limit = 30;
+    //std::cout << "total " << seqs.size() << std::endl;
+    if (seqs.size() < cluster_size_limit){
+        for (const auto& seq: seqs) {
+            auto alignment = alignment_engine->Align(seq, graph);
+            graph.AddAlignment(alignment, seq);
 
-        auto alignment = alignment_engine->Align(seq, graph);
-        graph.AddAlignment(alignment, seq);
-
+        }
+        consensus = graph.GenerateConsensus();
     }
-    consensus = graph.GenerateConsensus();
+    else{
+        std::vector<int> indices;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> distribution(0, seqs.size() - 1);
+        while(indices.size() < cluster_size_limit){
+            int randomInt = distribution(gen);
+            auto it = std::find(indices.begin(), indices.end(), randomInt);
+            if (it == indices.end()){
+                indices.push_back(randomInt);
+            }
+        }
+        for (const auto& index: indices) {
+            auto alignment = alignment_engine->Align(seqs[index], graph);
+            graph.AddAlignment(alignment, seqs[index]);
+        }
+        consensus = graph.GenerateConsensus();
+    }
 }
 
 void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score, int T) const {
@@ -200,7 +222,7 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
     for (int j = 1; j < m+1; j++){
       int S = (cent_seq[i-1] == read_seq[j-1]) ? match_score : mismatch_score;
       dp[i * (m+1) + j] = std::min(dp[(i-1)*(m+1) + j] + gap_score, std::min(dp[i * (m+1) + j-1] + gap_score, dp[(i-1)*(m+1) + j-1] + S));
-      if (dp[i * (m+1) + j] + abs(i - j) < min_score_per_row) min_score_per_row = dp[i * (m+1) + j] + abs(i - j);
+      if (dp[i * (m+1) + j] + abs((n - m) - (i - j)) < min_score_per_row) min_score_per_row = dp[i * (m+1) + j] + abs((n - m) - (i - j));
     }
     if (min_score_per_row > T){
         score = T + 1;
@@ -212,7 +234,7 @@ void HaplotypeGenerator::needleman_wunsch(const std::string& cent_seq, const std
 }
 
 // Clustering reads based on the similarity between them. The similarity is computed based on edit distance.
-void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters) const {
+bool HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs, std::map<std::string, std::vector<std::string>>& clusters, int threshold) const {
   std::vector<std::string> centroids;
   centroids.push_back(seqs[0]); // first centroid is the first sequence
   clusters[seqs[0]].push_back(seqs[0]);;
@@ -220,9 +242,11 @@ void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs,
     int min_score = INT_MAX;
     int min_cntr = -1;
     for (int j = 0; j < centroids.size(); j++) {
-      int T = 0.1 * centroids[j].size();
+      //int T = std::min(static_cast<int>(0.1 * centroids[j].size()), threshold);
+      int T = threshold;
       int score = -1;
       HaplotypeGenerator::needleman_wunsch(seqs[i], centroids[j], score, T);
+      //std::cout << seqs[i].size() << " " << centroids[j].size() << " " << score << " " << T << std::endl;
       assert(score != -1);
       if ((score < T) & (score < min_score)){
         min_cntr = j;
@@ -234,17 +258,22 @@ void HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs,
     }
     else { // make a new centroid
       centroids.push_back(seqs[i]);
+      if (centroids.size() > 15){ // threshold is too low, we are getting so many clusters //TODO, for multiple samples this might be small
+        return false;
+      }
       clusters[seqs[i]].push_back(seqs[i]);
     }
   }
+  return true;
 }
 
 // Optimizing clusters by performing poa in each cluster to
-bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_centroids, std::map<std::string, std::vector<std::string>>& clusters) const {
+bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_centroids, std::map<std::string, std::vector<std::string>>& clusters, int threshold) const {
     bool updated = false;
     //std::cout << "mergingggg" << std::endl;
     for (int i = 0; i < new_centroids.size(); i++){
-        int T = 0.1 * new_centroids[i].size(); // TODO make it constant
+        //int T = std::min(static_cast<int>(0.1 * new_centroids[i].size()), threshold); // TODO make it constant
+        int T = threshold;
         for (int j = 1; j < new_centroids.size(); j++){
             if (i != j && (clusters.find(new_centroids[i]) != clusters.end()) && (clusters.find(new_centroids[j]) != clusters.end())){
                 int score = -1;
@@ -342,9 +371,10 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
     sequences[ref_index] = sequences[0];
     sequences[0]         = std::pair<std::string,bool>(ref_seq,false);
   }
+  //for (auto seq:sequences) std::cout << seq.first.size() << std::endl;
 
   // Identify how many alignments don't have a candidate haplotype:
-  std::vector<std::pair<std::map<std::string, int>, int>> not_added_all_samples;
+  std::vector<std::pair<std::map<std::string, int>, int>> not_added_all_samples; //automatically initialized to zero
   for (unsigned int i = 0; i < alignments.size(); i++){
     std::map<std::string, int> not_added_sample;
     int samp_reads = 0;
@@ -360,63 +390,91 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
       }
     }
     if (samp_ignored > samp_reads*0.25){ // TODO make it a constant
-      not_added_all_samples.push_back(std::pair<std::map<std::string, int>, int>(not_added_sample, samp_reads));
+         not_added_all_samples.push_back(std::pair<std::map<std::string, int>, int>(not_added_sample, samp_ignored));
+      }
     }
-  }
+
   if (not_added_all_samples.size() > 0) { //There is at least one sample with ignored reads
     for (auto not_added_total_pair:not_added_all_samples){
         std::vector<std::string> uniqueStrings;
         for (auto pair : not_added_total_pair.first) {
-            uniqueStrings.push_back(pair.first);
+            uniqueStrings.push_back(pair.first); // All skipped sequences for this sample
         }
         std::sort(uniqueStrings.begin() + 1, uniqueStrings.end(), orderByLengthAndSequence);
-        std::map<std::string, std::vector<std::string>> clusters;
-        greedy_clustering(uniqueStrings, clusters);
+        //for (auto seq:uniqueStrings) std::cout << seq.size() << std::endl;
+        std::vector<int> thresholds = {20,50,80,100,150,200,300,400,500,600,700};
+        bool finished = false;
+        for (auto t:thresholds){
+            //std::cout << t << std::endl;
+            if (finished == true) break;
+            std::map<std::string, std::vector<std::string>> clusters;
+            bool clusters_done = greedy_clustering(uniqueStrings, clusters, t);
+            if (clusters_done == false) continue;
 
-        bool not_converged = true;
-        // refining clusters by replacing centroids from one of the
-        // sequences to partial order alignment of strings in each cluster
-        // continue until convergence
-        while (not_converged) {
-             std::map<std::string, std::vector<std::string>> updated_clusters;
-             std::vector<std::string> new_centroids;
-             for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-                  std::string consensus;
-                  poa(iter->second, consensus); // Find the centroid of each cluster by performing poa on strings of each cluster
-                  if (std::find(new_centroids.begin(), new_centroids.end(), consensus) == new_centroids.end()){
-                      new_centroids.push_back(consensus);
-                      updated_clusters[consensus] = iter->second;
-                  }
-                  else{ //new consensus is already in the set of centroids, so just append the elements in its cluster to the previous cluster
-                    updated_clusters[consensus].insert(updated_clusters[consensus].end(), iter->second.begin(), iter->second.end());
-                  }
+//            for  (auto c: clusters){
+//                std::cout << c.first.size() << "\t" << c.second.size() << std::endl;
+//            }
 
-             }
-             std::sort(new_centroids.begin() + 1, new_centroids.end(), orderByLengthAndSequence);
-             not_converged = merge_clusters(new_centroids, updated_clusters);
-             clusters = updated_clusters;
-        }
+            bool not_converged = true;
+            // refining clusters by replacing centroids from one of the
+            // sequences to partial order alignment of strings in each cluster
+            // continue until convergence
+            while (not_converged) {
+                 std::map<std::string, std::vector<std::string>> updated_clusters;
+                 std::vector<std::string> new_centroids;
+                 for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
+                      std::string consensus;
+                      poa(iter->second, consensus); // Find the centroid of each cluster by performing poa on strings of each cluster
+                      if (std::find(new_centroids.begin(), new_centroids.end(), consensus) == new_centroids.end()){
+                          new_centroids.push_back(consensus);
+                          updated_clusters[consensus] = iter->second;
+                      }
+                      else{ //new consensus is already in the set of centroids, so just append the elements in its cluster to the previous cluster
+                        updated_clusters[consensus].insert(updated_clusters[consensus].end(), iter->second.begin(), iter->second.end());
+                      }
 
-         // Add centroids of refined clusters to haplotype sequences
-         for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
-            int sum = 0;
-            for (auto seq: iter->second){
-                sum += not_added_total_pair.first[seq];
+                 }
+                 std::sort(new_centroids.begin() + 1, new_centroids.end(), orderByLengthAndSequence);
+                 not_converged = merge_clusters(new_centroids, updated_clusters, t);
+                 clusters = updated_clusters;
             }
-           //std::cout << "final sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
-            if (sum > std::min((int)(not_added_total_pair.second*0.20), 10)) { // only include clusters that have considerable reads.
-                if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
-                std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
-                    //std::cout << iter->first.size() << " " << sum << std::endl;
-                    sequences.push_back(std::pair<std::string,bool>(iter->first,true));
+
+//            for  (auto c: clusters){
+//                std::cout << "after " << c.first.size() << "\t" << c.second.size() << std::endl;
+//            }
+             // Add centroids of refined clusters to haplotype sequences
+             int new_seqs_added = 0;
+             std::vector<std::pair<std::string, bool>> potential_seqs;
+             for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
+                int sum_per_cluster = 0;
+                for (auto seq: iter->second){
+                    sum_per_cluster += not_added_total_pair.first[seq];
                 }
-         }
+               //std::cout << "final sequence size " << iter->first.size() << ". n sequences: " << iter->second.size() << std::endl;
+               //std::cout << sum_per_cluster << " tot " << not_added_total_pair.second << std::endl;
+                if (sum_per_cluster > std::min((int)(not_added_total_pair.second*0.10), 10)) { // only include clusters that have considerable reads.
+                    new_seqs_added += sum_per_cluster;
+                    if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
+                    std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
+                        potential_seqs.push_back(std::pair<std::string,bool>(iter->first,true));
+                    }
+             }
+           }
+           if (new_seqs_added >= (int)(0.80*not_added_total_pair.second)){ // does current clusters cover considerable portion of ignored reads?
+            //std::cout << "enough samples are covered" << new_seqs_added << "\t" << not_added_total_pair.second << std::endl;;
+            for (auto pair:potential_seqs){
+                sequences.push_back(pair);
+            }
+            finished = true;
+           }
        }
-     }
+    }
   }
 
   //Sort regions by length and then by sequence (apart from reference sequence)
   std::sort(sequences.begin()+1, sequences.end(), orderByLengthAndSequencePair);
+
+  //for (auto seq:sequences) std::cout << seq.first.size() << std::endl;
 
   // Clip identical regions
   trim(ideal_min_length, region_start, region_end, sequences);
