@@ -45,7 +45,12 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "                                      "  << "\t" << " used as candidate variants instead of finding candidates in the BAMs/CRAMs (Default)" << "\n"
 	    << "\t" << "--snp-vcf    <phased_snps.vcf.gz>     "  << "\t" << "Bgzipped input VCF file containing phased SNP genotypes for the samples"               << "\n"
 	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
-	    //<< "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
+
+	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
+	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
+	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
+	    << "\t" << "--phased-bam	                      "  << "\t" << "Use phasing information from haplotagged sequencing data." << "\n"
+	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n"
     
 	    << "Optional output parameters:" << "\n"
 	    << "\t" << "--log           <log.txt>             "  << "\t" << "Output the log information to the provided file (Default = Standard error)"         << "\n"
@@ -57,7 +62,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
     //    << "\t" << "--filt-bam      <filt_reads.bam>      "  << "\t" << "Output a BAM file containing the reads filtered in each region. Each BAM entry"      << "\n"
     //    << "\t" << "                                      "  << "\t" << " has an FT tag specifying the reason for filtering"                                  << "\n" << "\n"
 
-	    << "Optional read filtering parameters:" << "\n"
+	//    << "Optional read filtering parameters:" << "\n"
 	    //<< "\t" << "--no-rmdup                            "  << "\t" << "Don't remove PCR duplicates. By default, they'll be removed"                         << "\n"
 	    //<< "\t" << "--use-unpaired                        "  << "\t" << "Use unpaired reads when genotyping. (Default = False)"                               << "\n"
 	    //<< "\t" << "--max-mate-dist <max_bp>              "  << "\t" << "Remove reads whose mate pair distance is > MAX_BP (Default = " << def_mdist << ")"   << "\n" << "\n"
@@ -85,9 +90,9 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "Optional haplotype filtering parameters:" << "\n"
 	    << "\t" << "--max-haps <max_haplotypes>           "  << "\t" << "Maximum allowable candidate haplotypes for an TR (Default = " << def_max_haplotypes << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate haplotypes will not be genotyped" << "\n"
-	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
-	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
-	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
+//	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
+//	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
+//	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
 
 	    << "Other optional parameters:" << "\n"
 	    << "\t" << "--help                                "  << "\t" << "Print this help message and exit"                                                     << "\n"
@@ -101,17 +106,14 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--hap-chr-file       <hap_chroms.txt> "  << "\t" << "File containing chromosomes to treat as haploid, one per line"                        << "\n"
 	    << "\t" << "--min-reads          <num_reads>      "  << "\t" << "Minimum total reads required to genotype a locus (Default = " << def_min_reads << ")" << "\n"
 	    << "\t" << "--max-reads          <num_reads>      "  << "\t" << "Skip a locus if it has more than NUM_READS reads (Default = " << def_max_reads << ")" << "\n"
-	    << "\t" << "--max-tr-len         <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
+	    << "\t" << "--max-tr-len         <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n" << std::endl;
     //<< "\t" << "--skip-genotyping                     "  << "\t" << "Don't perform any STR genotyping and merely compute the stutter model for each STR"  << "\n"
     //<< "\t" << "--dont-use-all-reads                  "  << "\t" << "Only utilize the reads HipSTR thinks will be informative for genotyping"   << "\n"
     //<< "\t" << "                                      "  << "\t" << " Enabling this option usually slightly decreases accuracy but shortens runtimes (~2x)"      << "\n"
     //<< "\t" << "--read-qual-trim     <min_qual>       "  << "\t" << "Trim both ends of a read until a base has quality score > MIN_QUAL (Default = 5)"    << "\n"
-	    << "\t" << "--fam <fam_file>                      "  << "\t" << "FAM file containing pedigree information for samples of interest. Use the pedigree"  << "\n"
-            << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing TRs (Default = use all SNPs)"         << "\n"
-	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
-	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
-	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
-	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n" << std::endl;
+	//    << "\t" << "--fam <fam_file>                      "  << "\t" << "FAM file containing pedigree information for samples of interest. Use the pedigree"  << "\n"
+     //       << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing TRs (Default = use all SNPs)"         << "\n"
+
 //	    << "\n" << "\n"
 //	    << "*** Looking for answers to commonly asked questions or usage examples? ***"                     << "\n"
 //	    << "\t i.  An in-depth description of HipSTR is available at https://hipstr-tool.github.io/HipSTR"  << "\n"
@@ -373,7 +375,7 @@ int main(int argc, char** argv){
   precompute_integer_logs(); // Calculate and cache log of integers from 1 -> 999
 
   std::stringstream full_command_ss;
-  full_command_ss << "HipSTR-" << VERSION;
+  full_command_ss << "LongTR-" << VERSION;
   for (int i = 1; i < argc; i++)
     full_command_ss << " " << argv[i];
   std::string full_command = full_command_ss.str();
