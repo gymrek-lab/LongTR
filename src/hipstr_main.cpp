@@ -48,7 +48,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 
 	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
 	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
-	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
+	    << "\t" << "--stutter-align-len   <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
 	    << "\t" << "--phased-bam	                      "  << "\t" << "Use phasing information from haplotagged sequencing data." << "\n"
 	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n"
     
