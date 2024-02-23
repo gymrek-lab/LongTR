@@ -29,7 +29,7 @@ bool is_file(const std::string& name){
   return (S_ISREG (st_buf.st_mode));
 }
 
-void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len, int def_switch_old_align_len){
+void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_max_str_len, int def_max_haplotypes, int def_max_flanks, double def_min_flank_freq, int def_indel_flank_len, int def_switch_old_align_len, double def_min_mapq, double def_mean_qual){
   std::cerr << "Usage: LongTR --bams <list_of_bams> --fasta <genome.fa> --regions <region_file.bed> --tr-vcf <tr_gts.vcf.gz> [OPTIONS]" << "\n" << "\n"
     
 	    << "Required parameters:" << "\n"
@@ -47,9 +47,9 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
 
 	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
-	    << "\t" << "--min-mean-qual	      <threshold>     "  << "\t" << "Minimum average quality threshold for sequencing read data" << "\n"
-	    << "\t" << "--min-mapq	          <threshold>     "  << "\t" << "Minimum MAPQ per read" << "\n"
-	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
+	    << "\t" << "--min-mean-qual       <threshold>     "  << "\t" << "Minimum average quality threshold for sequencing read data (Default = " << def_mean_qual << ")" << "\n"
+	    << "\t" << "--min-mapq            <threshold>     "  << "\t" << "Minimum MAPQ per read (Default = " << def_min_mapq << ")" << "\n"
+	    << "\t" << "--stutter-align-len   <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
 	    << "\t" << "--phased-bam	                      "  << "\t" << "Use phasing information from haplotagged sequencing data." << "\n"
 	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n"
 	    //<< "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
@@ -140,9 +140,11 @@ void parse_command_line_args(int argc, char** argv,
   double def_min_flank_freq = bam_processor.MIN_FLANK_FREQ;
   int def_indel_flank_len = bam_processor.INDEL_FLANK_LEN;
   int def_switch_old_align_len = bam_processor.SWITCH_OLD_ALIGN_LEN;
+  double def_min_mapq = bam_processor.MIN_MAPQ;
+  double def_mean_qual = bam_processor.MIN_SUM_QUAL_LOG_PROB;
 
   if (argc == 1 || (argc == 2 && std::string("-h").compare(std::string(argv[1])) == 0)){
-    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len);
+    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len, def_min_mapq, def_mean_qual);
     exit(0);
   }
 
@@ -358,7 +360,7 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
   if (print_help){
-    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len);
+    print_usage(def_mdist, def_min_reads, def_max_reads, def_max_str_len, def_max_haplotypes, def_max_flanks, def_min_flank_freq, def_indel_flank_len, def_switch_old_align_len, def_min_mapq, def_mean_qual);
     exit(0);
   }
   if (quiet_log)
