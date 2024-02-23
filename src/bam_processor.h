@@ -92,7 +92,8 @@ class BamProcessor {
    total_read_filter_time_  = 0;
    locus_read_filter_time_  = -1;
    MAX_STR_LENGTH           = 1000;
-   MIN_SUM_QUAL_LOG_PROB    = -10;
+   MIN_SUM_QUAL_LOG_PROB    = 30;
+   MIN_MAPQ                 = 20;
    quiet_                   = false;
    silent_                  = false;
    log_to_file_             = false;
@@ -165,6 +166,7 @@ class BamProcessor {
  int     REQUIRE_PAIRED_READS;  // Only utilize paired STR reads to genotype individuals
 
  double  MIN_SUM_QUAL_LOG_PROB;
+ double MIN_MAPQ;
  int32_t MAX_TOTAL_READS;       // Skip loci where the number of STR reads passing all filters exceeds this limit
  char    BASE_QUAL_TRIM;        // Trim boths ends of the read until encountering a base with quality greater than this threshold
  bool    TOO_MANY_READS;        // Flag set if the current locus being processed as too many reads

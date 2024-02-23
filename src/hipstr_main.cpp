@@ -47,11 +47,13 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
 
 	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
-	    << "\t" << "--min-sum-qual	      <threshold>     "  << "\t" << "Allow for lower quality threshold for long read data" << "\n"
-	    << "\t" << "--stutter-align-len   <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
+	    << "\t" << "--min-mean-qual	      <threshold>     "  << "\t" << "Minimum average quality threshold for sequencing read data" << "\n"
+	    << "\t" << "--min-mapq	          <threshold>     "  << "\t" << "Minimum MAPQ per read" << "\n"
+	    << "\t" << "--stutter-align-len	  <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
 	    << "\t" << "--phased-bam	                      "  << "\t" << "Use phasing information from haplotagged sequencing data." << "\n"
 	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n"
-    
+	    //<< "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
+
 	    << "Optional output parameters:" << "\n"
 	    << "\t" << "--log           <log.txt>             "  << "\t" << "Output the log information to the provided file (Default = Standard error)"         << "\n"
 	    //<< "\t" << "--viz-out       <aln_viz.gz>          "  << "\t" << "Output a file of each locus' alignments for visualization with VizAln or VizAlnPdf" << "\n"
@@ -122,8 +124,8 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 //	    << "\t i.  File an issue on GitHub (https://github.com/tfwillems/HipSTR)"                           << "\n"
 //	    << "\t ii. Email us at hipstrtool@gmail.com" << "\n"                                                << "\n" << std::endl;
 }
-  
-void parse_command_line_args(int argc, char** argv, 
+
+void parse_command_line_args(int argc, char** argv,
 			     std::string& bamfile_string,     std::string& bamlist_string,    std::string& rg_sample_string,  std::string& rg_lib_string,
 			     std::string& haploid_chr_string, std::string& hap_chr_file,      std::string& fasta_file,        std::string& region_file,   std::string& snp_vcf_file,
 			     std::string& chrom,              std::string& bam_pass_out_file, std::string& bam_filt_out_file, std::string& ref_vcf_file,
@@ -176,7 +178,8 @@ void parse_command_line_args(int argc, char** argv,
     {"max-tr-len",     required_argument, 0, 'x'},
     {"filt-bam",        required_argument, 0, 'y'},
     {"viz-out",         required_argument, 0, 'z'},
-    {"min-sum-qual",	required_argument, 0, 'W'},
+    {"min-mean-qual",	required_argument, 0, 'W'},
+    {"min-mapq",	    required_argument, 0, 'A'},
     {"phased-bam",           no_argument, &phased_bam, 1},
     {"h",                  no_argument, &print_help, 1},
     {"help",               no_argument, &print_help, 1},
@@ -205,7 +208,7 @@ void parse_command_line_args(int argc, char** argv,
   std::string filename;
   while (true){
     int option_index = 0;
-    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:O:L", long_options, &option_index);
+    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:O:L:A", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -322,6 +325,9 @@ void parse_command_line_args(int argc, char** argv,
       break;
     case 'W':
 	bam_processor.MIN_SUM_QUAL_LOG_PROB = atof(optarg);
+	break;
+	case 'A':
+	bam_processor.MIN_MAPQ = atof(optarg);
 	break;
 	case 'L':
 	bam_processor.INDEL_FLANK_LEN = atof(optarg);

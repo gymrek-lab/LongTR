@@ -192,7 +192,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
   locus_read_filter_time_ = clock();
   assert(reader.get_merge_type() == BamCramMultiReader::ORDER_ALNS_BY_FILE);
 
-  int32_t read_count = 0, not_spanning = 0, unique_mapping = 0, read_has_N = 0, hard_clip = 0, low_qual_score = 0, num_filt_unpaired_reads = 0;
+  int32_t read_count = 0, not_spanning = 0, unique_mapping = 0, read_has_N = 0, hard_clip = 0, low_qual_score = 0, num_filt_unpaired_reads = 0, low_mapq = 0;
   BamAlignment alignment;
   BamAlnList paired_str_alns, mate_alns, unpaired_str_alns;
   std::map<std::string, BamAlignment> potential_strs, potential_mates;
@@ -271,6 +271,10 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
       else if (base_quality_.sum_log_prob_correct(alignment.Qualities()) < MIN_SUM_QUAL_LOG_PROB){
 	low_qual_score++;
 	filter.append("LOW_BASE_QUALS");
+      }
+      else if (alignment.MapQuality() < MIN_MAPQ){
+        low_mapq++;
+        filter.append("LOW_MAPQ");
       }
       else if ((REQUIRE_SPANNING == 1) && !spans_a_region(regions, alignment)){
 	not_spanning++;
@@ -436,6 +440,7 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
   selective_logger() << read_count << " reads overlapped region, of which "
 		     << "\n\t" << hard_clip      << " were hard clipped"
 		     << "\n\t" << read_has_N     << " had an 'N' base call"
+		     << "\n\t" << low_mapq     << " had low MAPQ"
 		     << "\n\t" << low_qual_score << " had low base quality scores";
   if (REQUIRE_SPANNING == 1)
     selective_logger() << "\n\t" << not_spanning << " did not span the STR";

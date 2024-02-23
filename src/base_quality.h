@@ -76,9 +76,11 @@ class BaseQuality {
 
   double sum_log_prob_correct(const std::string& qualities) const {
     double sum = 0.0;
-    for (unsigned int i = 0; i < qualities.size(); i++)
-      sum += log_prob_correct(qualities[i]);
-    return sum;
+    for (unsigned int i = 0; i < qualities.size(); i++){
+      sum += double(qualities[i] - MIN_BASE_QUALITY);
+     }
+    //std::cout << sum / qualities.size() << std::endl;
+    return sum / qualities.size();
   }
 
   std::string median_base_qualities(const std::vector<const std::string*>& qualities) const;
