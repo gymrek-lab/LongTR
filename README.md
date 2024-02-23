@@ -37,8 +37,8 @@ When executing the tool on a PacBio HiFi dataset, the following parameters are r
          --regions          tr_regions.bed
          --tr-vcf           tr_calls.vcf.gz
 	 --skip-assembly
-	 --min-sum-qual     <threshold>
-	 --max-tr-len      <max-tr-len>    
+	 --min-mean-qual    <threshold>
+	 --max-tr-len       <max-tr-len>    
 	 --phased-bam
 ```
 
@@ -48,13 +48,14 @@ When executing the tool on a PacBio HiFi dataset, the following parameters are r
 * **--tr-vcf** : The output path for the TR genotypes
 * **--phased-bam** : For using haplotype-specific bam files. Input bam file should be happlotagged first to use this option
 * **--skip-assembly** : This parameter has been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions
-* **--min-sum-qual** : Threshold for quality of read which is based on Illumina 1.8 Phred+33 quality score system
+* **--min-mean-qual** : Threshold for average quality of read which is based on Illumina 1.8 Phred+33 quality score system
 * **--max-tr-len** : Maximum length of TR that will be genotyped by LongTR (Default 1000)
 * **--min-reads** : Minimum total reads required to genotype a locus (Default = 10)
   
 Additional parameters:
 
-* **--stutter-align-len** <threshold>: Switch to the alignment with error modeling, only for homopolymers with a length shorter than the specified threshold. 
+* **--stutter-align-len**: Switch to the alignment with error modeling, only for homopolymers with a length shorter than the specified threshold.
+* **--min-mapq**: Filter reads with MAPQ less than a provided threshold.
 
 For each region in *tr_regions.bed*, **LongTR** will output the resulting TR genotypes to *tr_calls.vcf.gz*, a [bgzipped](http://www.htslib.org/doc/tabix.html) [VCF](#str-vcf) file. This VCF will contain calls for each sample in any of the BAM/CRAM files' read groups.
 
