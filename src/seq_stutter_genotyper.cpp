@@ -943,11 +943,12 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	int bp_diff; bool got_size;
 
 	for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
-		if (seed_positions_[read_index] < 0){
-			read_LL_ptr += num_alleles_;
-			continue;
-		}
-
+	    if (SWITCH_OLD_ALIGN_LEN){
+            if (seed_positions_[read_index] < 0){
+                read_LL_ptr += num_alleles_;
+                continue;
+            }
+        }
 		// Extract read's phase posterior conditioned on the determined sample genotype
 		int hap_a            = haplotypes[sample_label_[read_index]].first;
 		int hap_b            = haplotypes[sample_label_[read_index]].second;
@@ -960,7 +961,6 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 		int read_strand = 0;
 		if (!haploid_ && ((hap_a != hap_b))){
 			double v1 = log_p1_[read_index]+read_LL_ptr[hap_a], v2 = log_p2_[read_index]+read_LL_ptr[hap_b];
-			if (std::fabs(v1-v2) > STRAND_TOLERANCE){
 				read_strand = (v1 > v2 ? 0 : 1);
 				if (read_strand == 0) {
 					unique_reads_hap_one[sample_label_[read_index]]++;
@@ -970,15 +970,15 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 					unique_reads_hap_two[sample_label_[read_index]]++;
 					if (alns_[read_index].is_from_reverse_strand()) rv_unique_reads_hap_two[sample_label_[read_index]]++;
 				}
-			}
+
 		}
 
 		// Retrace alignment and ensure that it's of sufficient quality
 		double trace_start = clock();
 		int best_hap = (read_strand == 0 ? hap_a : hap_b);
 		AlignmentTrace* trace = NULL;
-		std::pair<int,int> trace_key(pool_index_[read_index], best_hap);
 		if (SWITCH_OLD_ALIGN_LEN){
+		    std::pair<int,int> trace_key(pool_index_[read_index], best_hap);
             auto trace_iter = trace_cache_.find(trace_key);
             if (trace_iter == trace_cache_.end()){
                 trace  = hap_aligner.trace_optimal_aln(alns_[read_index], seed_positions_[read_index], best_hap, &base_quality_);
@@ -1026,8 +1026,9 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
                     ml_bps_per_sample[sample_label_[read_index]].push_back(allele_bp_diffs[hap_to_allele[best_hap]]+trace->total_stutter_size());
                 }
 		}
-		else
+		else{
 		    ml_bps_per_sample[sample_label_[read_index]].push_back(allele_bp_diffs[hap_to_allele[best_hap]]);
+		}
 		read_LL_ptr += num_alleles_;
 	}
 
