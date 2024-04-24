@@ -134,7 +134,7 @@ LongTR can analyze both BAM and CRAM files simultaneously, so if your project co
 The BED file containing each TR region of interest is a tab-delimited file comprised of 5 required columns and one optional column: 
 
 1. The name of the chromosome on which the TR is located
-2. The start position of the TR on its chromosome
+2. The 1-based start position of the TR on its chromosome
 3. The end position of the TR on its chromosome
 4. The motif length (i.e. the number of bases in the repeat unit)
 5. The number of copies of the repeat unit in the reference allele
