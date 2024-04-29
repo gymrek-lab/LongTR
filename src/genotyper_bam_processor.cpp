@@ -37,7 +37,7 @@ int getUsedPhysicalMemoryKB(){
  */
 void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, const std::string& chrom_seq, std::vector<BamAlnList>& alignments,
 					     const std::vector< std::vector<double> >& log_p1, const std::vector< std::vector<double> >& log_p2,
-					     std::vector< std::vector<double> >& filt_log_p1,  std::vector< std::vector<double> >& filt_log_p2,
+					     std::vector< std::vector<double> >& filt_log_p1,  std::vector< std::vector<double> >& filt_log_p2, std::vector<int>& n_p1s, std::vector<int>& n_p2s,
 					     std::vector<Alignment>& left_alns){
   locus_left_aln_time_ = clock();
   selective_logger() << "Trimming reads" << std::endl;
@@ -49,6 +49,8 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
   for (unsigned int i = 0; i < alignments.size(); ++i){
     filt_log_p1.push_back(std::vector<double>());
     filt_log_p2.push_back(std::vector<double>());
+    int n_p1_sample = 0;
+    int n_p2_sample = 0;
     for (unsigned int j = 0; j < alignments[i].size(); ++j, ++total_reads){
       // Discard read if it doesn't entirely overlap with the repeat
       if (alignments[i][j].pos_  > region_group.start() || alignments[i][j].end_pos_ < region_group.stop()) {
@@ -140,6 +142,13 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
    left_alns.push_back(new_aln);
    seq_to_alns[alignments[i][j].QueryBases()] = left_alns.size()-1;
 
+   int64_t haplotype;
+    if (alignments[i][j].HasTag(HAPLOTYPE_TAG.c_str())){
+        alignments[i][j].GetIntTag(HAPLOTYPE_TAG.c_str(), haplotype);
+        if (haplotype == 1) n_p1_sample++;
+        if (haplotype == 2) n_p2_sample++;
+    }
+
     left_alns.back().check_CIGAR_string(); // Ensure alignment is properly formatted
     filt_log_p1[i].push_back(log_p1[i][j]);
     filt_log_p2[i].push_back(log_p2[i][j]);
@@ -148,6 +157,8 @@ void GenotyperBamProcessor::left_align_reads(const RegionGroup& region_group, co
     BamProcessor::passes_filters(alignments[i][j], passes_region_filters);
     left_alns.back().set_hap_gen_info(passes_region_filters);
     }
+    n_p1s.push_back(n_p1_sample);
+    n_p2s.push_back(n_p2_sample);
   }
 
   locus_left_aln_time_  = (clock() - locus_left_aln_time_)/CLOCKS_PER_SEC;
@@ -276,11 +287,11 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
   if (vcf_writer_.is_open() && stutter_success) {
     std::vector<Alignment> left_alignments;
     std::vector< std::vector<double> > filt_log_p1s, filt_log_p2s;
+    std::vector<int> n_p1s, n_p2s;
     left_align_reads(region_group, chrom_seq, alignments, log_p1s, log_p2s, filt_log_p1s,
-		     filt_log_p2s, left_alignments);
+		     filt_log_p2s, n_p1s, n_p2s, left_alignments);
     bool run_assembly = (REQUIRE_SPANNING == 0);
-
-    seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, rg_names, chrom_seq,
+    seq_genotyper = new SeqStutterGenotyper(region_group, haploid, run_assembly, left_alignments, filt_log_p1s, filt_log_p2s, n_p1s, n_p2s, rg_names, chrom_seq,
 					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
     if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
       bool pass = true;

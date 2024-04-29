@@ -929,6 +929,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 
 	// Extract information about each read and group by sample
 	std::vector<int> num_aligned_reads(num_samples_, 0), num_reads_with_snps(num_samples_, 0);
+	std::vector<int> num_aligned_reads_hap_a(num_samples_, 0), num_aligned_reads_hap_b(num_samples_, 0);
 	std::vector<int> num_reads_with_stutter(num_samples_, 0), num_reads_with_flank_indels(num_samples_, 0);
 	std::vector<int> num_reads_strand_one(num_samples_, 0), num_reads_strand_two(num_samples_, 0);
 	std::vector<int> unique_reads_hap_one(num_samples_, 0), unique_reads_hap_two(num_samples_, 0);
@@ -952,7 +953,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 		// Extract read's phase posterior conditioned on the determined sample genotype
 		int hap_a            = haplotypes[sample_label_[read_index]].first;
 		int hap_b            = haplotypes[sample_label_[read_index]].second;
-		double total_read_LL = log_sum_exp(LOG_ONE_HALF+log_p1_[read_index]+read_LL_ptr[hap_a], LOG_ONE_HALF+log_p2_[read_index]+read_LL_ptr[hap_b]);
+		double total_read_LL = log(exp(read_LL_ptr[hap_a] + log_p1_[read_index] + LOG_ONE_HALF) + exp(read_LL_ptr[hap_b] + log_p2_[read_index] + LOG_ONE_HALF));
 		double log_phase_one = LOG_ONE_HALF + log_p1_[read_index] + read_LL_ptr[hap_a] - total_read_LL; 
 		log_read_phases[sample_label_[read_index]].push_back(log_phase_one);
 
@@ -998,6 +999,11 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
         }
 		// Adjust number of aligned reads per sample
 		num_aligned_reads[sample_label_[read_index]]++;
+
+		// Adjust number of phased reads per sample
+		if (log_p1_[read_index] == -0.000001) num_aligned_reads_hap_a[sample_label_[read_index]]++;
+		if (log_p2_[read_index] == -0.000001) num_aligned_reads_hap_b[sample_label_[read_index]]++;
+
 		// Adjust number of reads with SNP information for each sample
 		if (std::fabs(log_p1_[read_index] - log_p2_[read_index]) > TOLERANCE){
 			num_reads_with_snps[sample_label_[read_index]]++;
@@ -1013,7 +1019,8 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 		}
 		else{
 		got_size = ExtractCigar(alns_[read_index].get_cigar_list(), alns_[read_index].get_start(), region.start()-5, region.stop()+5, bp_diff); //TODO padding size
-		if (got_size) bps_per_sample[sample_label_[read_index]].push_back(bp_diff);
+		if (got_size)
+		bps_per_sample[sample_label_[read_index]].push_back(bp_diff);
 		}
 
 		// Extract the ML bp difference observed in read based on the ML genotype,
@@ -1245,7 +1252,6 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 					&left, &right, &two);
 			strand_bias = log10(std::min(1.0, two));
 		}
-
 		if (!haploid_){
 			out << old_to_new[gts[sample_index].first] << "|" << old_to_new[gts[sample_index].second]     // Genotype
 				<< ":" << allele_bp_diffs[gts[sample_index].first]
@@ -1255,7 +1261,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 				<< ":" << num_aligned_reads[sample_index]                                                 // Total reads used to genotype (after filtering)
 				<< ":" << num_reads_with_snps[sample_index]                                               // Total reads with SNP information
 				<< ":" << num_reads_with_flank_indels[sample_index]                                       // Total reads with an indel in flank in ML alignment
-				<< ":" << phase1_reads << "|" << phase2_reads                                             // Reads per allele
+				<< ":" << n_p1s_[sample_index] << "|" << n_p2s_[sample_index]                      // Reads per haplotype
 				<< ":" << num_reads_strand_one[sample_index] << "|" << num_reads_strand_two[sample_index]; // Reads with SNPs supporting each haploid genotype
 
 			// Difference in GL between the current and next best genotype

@@ -72,7 +72,7 @@ private:
 
   void left_align_reads(const RegionGroup& region_group, const std::string& chrom_seq, std::vector<BamAlnList>& alignments,
 			const std::vector< std::vector<double> >& log_p1, const std::vector< std::vector<double> >& log_p2,
-			std::vector< std::vector<double> >& filt_log_p1,  std::vector< std::vector<double> >& filt_log_p2,
+			std::vector< std::vector<double> >& filt_log_p1,  std::vector< std::vector<double> >& filt_log_p2, std::vector<int>& n_p1s, std::vector<int>& p2s,
 			std::vector< Alignment>& left_alns);
 
   StutterModel* learn_stutter_model(std::vector<BamAlnList>& alignments,
