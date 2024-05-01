@@ -188,7 +188,7 @@ Q         | Posterior probability of unphased genotype
 PQ        | Posterior probability of phased genotype
 DP        | Number of valid reads used for sample's genotype
 DSNP      | Number of reads with SNP phasing information
-PDP       | Fractional reads supporting each haploid genotype
+PDP       | Fractional reads originating from each haplotype, based on haplotag information
 GLDIFF    | Difference in likelihood between the reported and next best genotypes
 DSNP      | Total number of reads with SNP information
 PSNP      | Number of reads with SNPs supporting each haploid genotype
