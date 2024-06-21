@@ -36,7 +36,6 @@ When executing the tool on a PacBio HiFi dataset, the following parameters are r
          --fasta            genome.fa
          --regions          tr_regions.bed
          --tr-vcf           tr_calls.vcf.gz
-	 --skip-assembly
 	 --min-mean-qual    <threshold>
 	 --max-tr-len       <max-tr-len>    
 	 --phased-bam
@@ -47,7 +46,6 @@ When executing the tool on a PacBio HiFi dataset, the following parameters are r
 * **--fasta** : [FASTA file](https://en.wikipedia.org/wiki/FASTA_format) containing the sequence for each chromosome in the BED file. This build's coordinates must match those of the TR regions
 * **--tr-vcf** : The output path for the TR genotypes
 * **--phased-bam** : For using haplotype-specific bam files. Input bam file should be happlotagged first to use this option
-* **--skip-assembly** : This parameter has been added to skip assembling flanking sequences of repeats. Given that long reads are long enough to encompass the whole repeat region as well as its flanking regions
 * **--min-mean-qual** : Threshold for average quality of read which is based on Illumina 1.8 Phred+33 quality score system (Default 30)
 * **--max-tr-len** : Maximum length of TR that will be genotyped by LongTR (Default 1000)
 * **--min-reads** : Minimum total reads required to genotype a locus (Default = 10)
