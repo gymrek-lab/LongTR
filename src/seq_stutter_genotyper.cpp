@@ -43,7 +43,7 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 	    retrace_alignments(traced_alns);
     }
 	double locus_assembly_time = clock();
-	logger << "Reassembling flanking sequences" << std::endl;
+	logger << "Processing flanking sequences" << std::endl;
 	std::vector< std::vector<std::string> > alleles_to_add (haplotype_->num_blocks());
 	std::vector<bool> realign_sample(num_samples_, false);
 	int new_total_haps = haplotype_->num_combs();
@@ -97,7 +97,7 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 				}
 				acyclic = true;
 			}
-			else{ 
+			else{
 				acyclic = false;
 				for (int k = kmer_length; k <= max_k; k++){
 					DebruijnGraph assembler(k, ref_seq);

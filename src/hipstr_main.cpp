@@ -46,7 +46,7 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--snp-vcf    <phased_snps.vcf.gz>     "  << "\t" << "Bgzipped input VCF file containing phased SNP genotypes for the samples"               << "\n"
 	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
 
-	    << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
+	   // << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
 	    << "\t" << "--min-mean-qual       <threshold>     "  << "\t" << "Minimum average quality threshold for sequencing read data (Default = " << def_mean_qual << ")" << "\n"
 	    << "\t" << "--min-mapq            <threshold>     "  << "\t" << "Minimum MAPQ per read (Default = " << def_min_mapq << ")" << "\n"
 	    << "\t" << "--stutter-align-len   <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
@@ -148,7 +148,7 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
 
-  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 0, indel_flank_len = 5, switch_old_align_len = 0;
+  int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 1, indel_flank_len = 5, switch_old_align_len = 0;
 
   static struct option long_options[] = {
     {"bams",            required_argument, 0, 'b'},
@@ -201,7 +201,7 @@ void parse_command_line_args(int argc, char** argv,
     {"quiet",              no_argument, &quiet_log, 1},
     {"silent",             no_argument, &silent_log, 1},
     {"skip-genotyping",    no_argument, &skip_genotyping, 1},
-    {"skip-assembly",	   no_argument, &skip_assembly, 1},
+    {"skip-assembly",	   no_argument, &skip_assembly, 0},
     {"stutter-align-len",    required_argument, 0, 'O'},
     {"indel-flank-len",    required_argument, 0, 'L'},
     {0, 0, 0, 0}
@@ -345,7 +345,6 @@ void parse_command_line_args(int argc, char** argv,
       break;
     }
   }
-
   if (optind < argc) {
     std::stringstream msg;
     msg << "Did not recognize the following command line arguments:" << "\n";
