@@ -471,6 +471,10 @@ private:
       std::cerr << "Skipping file check for AWS path " << path.c_str() << std::endl;
       return true;
     }
+    if (path.rfind("ftp") != -1) {
+      std::cerr << "Skipping file check for FTP path " << path.c_str() << std::endl;
+      return true;
+    }
     return (access(path.c_str(), F_OK) != -1);
   }
 
