@@ -200,4 +200,4 @@ PL        | Phred-scaled genotype likelihoods
 
 ## Citation
 
-Please cite our [Manuscript](https://doi.org/10.1186/s13059-024-03319-2) when using LongTR for your publications.
+Please cite our [manuscript](https://doi.org/10.1186/s13059-024-03319-2) when using LongTR for your publications.
