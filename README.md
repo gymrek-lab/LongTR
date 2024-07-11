@@ -10,7 +10,7 @@ cmake 3.12+
 
 LongTR relies on [spoa](https://github.com/rvaser/spoa) and [HTSLIB](https://github.com/samtools/htslib). These dependencies will be automatically downloaded and installed during the setup process. To ensure a successful installation, please ensure that the following dependencies are already installed on your system:
 
-google/googletest 1.10.0
+[google/googletest 1.10.0+](https://github.com/google/googletest)
 
 [zlib](https://zlib.net/)
 
