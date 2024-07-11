@@ -54,7 +54,7 @@ Additional parameters:
 
 * **--stutter-align-len**: Switch to the alignment with error modeling, only for homopolymers with a length shorter than the specified threshold
 * **--min-mapq**: Filter reads with MAPQ less than a provided threshold (Default 20)
-* **--indel-flank-len <max_bp>**: Include InDels in max_bp base pair around repeat as part of the repeath (Default = 5)
+* **--indel-flank-len <max_bp>**: Include InDels in max_bp base pair around repeat as part of the repeat (Default = 5)
 
 For each region in *tr_regions.bed*, **LongTR** will output the resulting TR genotypes to *tr_calls.vcf.gz*, a [bgzipped](http://www.htslib.org/doc/tabix.html) [VCF](#str-vcf) file. This VCF will contain calls for each sample in any of the BAM/CRAM files' read groups.
 
