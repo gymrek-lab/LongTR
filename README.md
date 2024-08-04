@@ -10,7 +10,7 @@ cmake 3.12+
 
 LongTR relies on [spoa](https://github.com/rvaser/spoa) and [HTSLIB](https://github.com/samtools/htslib). These dependencies will be automatically downloaded and installed during the setup process. To ensure a successful installation, please ensure that the following dependencies are already installed on your system:
 
-google/googletest 1.10.0
+[google/googletest 1.10.0+](https://github.com/google/googletest)
 
 [zlib](https://zlib.net/)
 
@@ -54,7 +54,7 @@ Additional parameters:
 
 * **--stutter-align-len**: Switch to the alignment with error modeling, only for homopolymers with a length shorter than the specified threshold
 * **--min-mapq**: Filter reads with MAPQ less than a provided threshold (Default 20)
-* **--indel-flank-len <max_bp>**: Include InDels in max_bp base pair around repeat as part of the repeath (Default = 5)
+* **--indel-flank-len <max_bp>**: Include InDels in max_bp base pair around repeat as part of the repeat (Default = 5)
 
 For each region in *tr_regions.bed*, **LongTR** will output the resulting TR genotypes to *tr_calls.vcf.gz*, a [bgzipped](http://www.htslib.org/doc/tabix.html) [VCF](#str-vcf) file. This VCF will contain calls for each sample in any of the BAM/CRAM files' read groups.
 
@@ -200,4 +200,4 @@ PL        | Phred-scaled genotype likelihoods
 
 ## Citation
 
-Please cite our [preprint](https://www.biorxiv.org/content/10.1101/2024.01.20.576266v1) when using LongTR for your publications.
+Please cite our [manuscript](https://doi.org/10.1186/s13059-024-03319-2) when using LongTR for your publications.
