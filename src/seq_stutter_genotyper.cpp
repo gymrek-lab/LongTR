@@ -19,7 +19,6 @@
 #include "zalgorithm.h"
 
 #include "SeqAlignment/AlignmentData.h"
-#include "SeqAlignment/AlignmentModel.h"
 #include "SeqAlignment/AlignmentViz.h"
 #include "SeqAlignment/HaplotypeGenerator.h"
 #include "SeqAlignment/HapAligner.h"
@@ -516,7 +515,7 @@ void SeqStutterGenotyper::calc_hap_aln_probs(std::vector<bool>& realign_to_haplo
 void SeqStutterGenotyper::calc_hap_aln_probs(std::vector<bool>& realign_to_haplotype, std::vector<bool>& realign_pool, std::vector<bool>& copy_read){
 	double locus_hap_aln_time = clock();
 	assert(haplotype_->num_combs() == realign_to_haplotype.size() && haplotype_->num_combs() == num_alleles_);
-	HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
+	HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters);
 
 	// Align each pooled read to each haplotype
 	AlnList& pooled_alns       = pooler_.get_alignments();
@@ -626,7 +625,7 @@ bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplo
 		}
 	}
 
-	init_alignment_model();
+	//init_alignment_model();
 	pooler_.pool(base_quality_);
 
 	// Align each read to each candidate haplotype and store them in the provided arrays
@@ -795,7 +794,7 @@ void SeqStutterGenotyper::retrace_alignments(std::vector<AlignmentTrace*>& trace
   get_optimal_haplotypes(haps);
   AlnList& pooled_alns = pooler_.get_alignments();
   std::vector<bool> realign_to_haplotype(num_alleles_, true);
-  HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
+  HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters);
   double* read_LL_ptr = log_aln_probs_;
   for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
     if (seed_positions_[read_index] < 0){
@@ -939,7 +938,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<AlnList> max_LL_alns_strand_one(num_samples_), left_alns_strand_one(num_samples_);
 	std::vector<AlnList> max_LL_alns_strand_two(num_samples_), left_alns_strand_two(num_samples_);
 	std::vector<bool> realign_to_haplotype(num_alleles_, true);
-	HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN);
+	HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters);
 	double* read_LL_ptr = log_aln_probs_;
 	int bp_diff; bool got_size;
 

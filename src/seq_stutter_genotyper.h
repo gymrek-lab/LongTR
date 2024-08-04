@@ -135,6 +135,7 @@ class SeqStutterGenotyper : public Genotyper {
 
   RegionGroup* region_group_;
   bool skip_assembly;
+  std::vector<float> alignment_parameters;
   int INDEL_FLANK_LEN;
   int SWITCH_OLD_ALIGN_LEN;
   std::vector<int> n_p1s_, n_p2s_;
@@ -147,7 +148,7 @@ class SeqStutterGenotyper : public Genotyper {
   SeqStutterGenotyper(const RegionGroup& region_group, bool haploid, bool reassemble_flanks,
 		      std::vector<Alignment>& alignments, std::vector< std::vector<double> >& log_p1, std::vector< std::vector<double> >& log_p2, std::vector<int>& n_p1s, std::vector<int>& n_p2s,
 		      const std::vector<std::string>& sample_names, const std::string& chrom_seq,
-		      std::vector<StutterModel*>& stutter_models, VCF::VCFReader* ref_vcf, std::ostream& logger, bool skip_assembly_, int INDEL_FLANK_LEN_, int SWITCH_OLD_ALIGN_LEN_): Genotyper(haploid, sample_names, log_p1, log_p2){
+		      std::vector<StutterModel*>& stutter_models, VCF::VCFReader* ref_vcf, std::ostream& logger, bool skip_assembly_, int INDEL_FLANK_LEN_, int SWITCH_OLD_ALIGN_LEN_, std::vector<float> alignment_parameters_): Genotyper(haploid, sample_names, log_p1, log_p2){
     region_group_          = region_group.copy();
     alns_                  = alignments;
     seed_positions_        = NULL;
@@ -171,6 +172,7 @@ class SeqStutterGenotyper : public Genotyper {
     assert(num_reads_ == alns_.size());
     init(stutter_models, chrom_seq, logger);
     skip_assembly = skip_assembly_;
+    alignment_parameters = alignment_parameters_;
   }
 
   ~SeqStutterGenotyper(){
