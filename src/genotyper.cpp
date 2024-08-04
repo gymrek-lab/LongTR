@@ -50,6 +50,7 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
   const int num_diplotypes = num_alleles_*num_alleles_;
   double* read_LL_ptr      = log_aln_probs_;
   for (int read_index = 0; read_index < num_reads_; ++read_index){
+    //std::cout << read_index << std::endl;
     double* sample_LL_ptr = log_sample_posteriors_ + num_diplotypes*sample_label_[read_index];
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
@@ -64,16 +65,12 @@ double Genotyper::calc_log_sample_posteriors(std::vector<int>& read_weights){
   //Compute each sample's total LL and normalize each genotype LL to generate valid log posteriors
 
   double* sample_LL_ptr = log_sample_posteriors_;
-  //std::cout << num_diplotypes << " " << *sample_LL_ptr << " " << *(sample_LL_ptr+num_diplotypes) << std::endl;
   for (int sample_index = 0; sample_index < num_samples_; ++sample_index){
     const double sample_total_LL = log_sum_exp(sample_LL_ptr, sample_LL_ptr+num_diplotypes);
     sample_total_LLs_[sample_index] = sample_total_LL;
-    //assert(sample_total_LL <= TOLERANCE);
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1)
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++sample_LL_ptr){
-        //std::cout << "before " << index_1 << " " << index_2 << " " << *sample_LL_ptr << " " << sample_total_LL << std::endl;
 	    *sample_LL_ptr -= sample_total_LL;
-	    //std::cout << "final " << *sample_LL_ptr << std::endl;
 	}
   }
 
@@ -93,7 +90,6 @@ void Genotyper::get_optimal_haplotypes(std::vector< std::pair<int, int> >& gts) 
   for (unsigned int sample_index = 0; sample_index < num_samples_; ++sample_index){
     for (int index_1 = 0; index_1 < num_alleles_; ++index_1){
       for (int index_2 = 0; index_2 < num_alleles_; ++index_2, ++log_posterior_ptr){
-        //std::cout << index_1 << " " << index_2 << " " << *log_posterior_ptr << std::endl;
         if (*log_posterior_ptr > log_phased_posteriors[sample_index]){
           log_phased_posteriors[sample_index] = *log_posterior_ptr;
           gts[sample_index] = std::pair<int,int>(index_1, index_2);
@@ -149,8 +145,10 @@ void Genotyper::extract_genotypes_and_likelihoods(int num_variants, std::vector<
   get_optimal_haplotypes(best_haplotypes);
 
   // Extract the ML alleles for the variant
-  for (int sample_index = 0; sample_index < num_samples_; sample_index++)
+  for (int sample_index = 0; sample_index < num_samples_; sample_index++){
+    //if (hap_to_allele[best_haplotypes[sample_index].first] == 1 || hap_to_allele[best_haplotypes[sample_index].second] == 1) std::cout << sample_index << std::endl;
     best_gts.push_back(std::pair<int,int>(hap_to_allele[best_haplotypes[sample_index].first], hap_to_allele[best_haplotypes[sample_index].second]));
+    }
 
   // Marginalize over all haplotypes to compute the genotype posteriors and use streaming log-sum-exp to aggregate values
   std::vector< std::vector<double>  > max_log_phased_posteriors   (num_samples_, std::vector<double>(num_variants*num_variants, -DBL_MAX/2));
