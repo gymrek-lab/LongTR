@@ -5,10 +5,36 @@
 #include <string>
 #include <vector>
 
-#include "AlignmentData.h"
 #include "AlignmentTraceback.h"
 #include "../base_quality.h"
 #include "Haplotype.h"
+
+class AlignmentModel {
+public:
+
+    unsigned int MAX_HOMOP_LEN;
+    float LOG_INS_TO_INS;
+    float LOG_INS_TO_MATCH;
+    float LOG_DEL_TO_DEL;
+    float LOG_DEL_TO_MATCH;
+    float LOG_MATCH_TO_MATCH;
+    float LOG_MATCH_TO_INS;
+    float LOG_MATCH_TO_DEL;
+
+    // Constructor
+    AlignmentModel(unsigned int max_homop_len, float log_ins_to_ins, float log_ins_to_match,
+                   float log_del_to_del, float log_del_to_match, float log_match_to_match,
+                   float log_match_to_ins, float log_match_to_del){
+    MAX_HOMOP_LEN = max_homop_len;
+    LOG_INS_TO_INS = log_ins_to_ins;
+    LOG_INS_TO_MATCH = log_ins_to_match;
+    LOG_DEL_TO_DEL = log_del_to_del;
+    LOG_DEL_TO_MATCH = log_del_to_match;
+    LOG_MATCH_TO_MATCH = log_match_to_match;
+    LOG_MATCH_TO_INS = log_match_to_ins;
+    LOG_MATCH_TO_DEL = log_match_to_del;
+    }
+};
 
 class HapAligner {
  private:
@@ -20,11 +46,8 @@ class HapAligner {
   std::vector<int32_t> repeat_ends_;
   int INDEL_FLANK_LEN;
   int SWITCH_OLD_ALIGN_LEN;
+  AlignmentModel* AlnModel;
 
-  /**
-   * Align the sequence contained in SEQ_0 -> SEQ_N using the recursion
-   * 0 -> 1 -> 2 ... N
-   **/
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
 
@@ -68,7 +91,8 @@ class HapAligner {
   HapAligner& operator=(const HapAligner& other);
 
  public:
-  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype, int INDEL_FLANK_LEN_, int SWITCH_OLD_ALIGN_LEN_){
+  HapAligner(Haplotype* haplotype, std::vector<bool>& realign_to_haplotype, int INDEL_FLANK_LEN_, int SWITCH_OLD_ALIGN_LEN_,
+                    std::vector<float>& alignment_model_params_){
     assert(realign_to_haplotype.size() == haplotype->num_combs());
     fw_haplotype_   = haplotype;
     rev_haplotype_  = haplotype->reverse(rev_blocks_);
@@ -79,9 +103,19 @@ class HapAligner {
     for (int i = 0; i < fw_haplotype_->num_blocks(); i++){
       HapBlock* block = fw_haplotype_->get_block(i);
       if (block->get_repeat_info() != NULL){
-	repeat_starts_.push_back(block->start());
-	repeat_ends_.push_back(block->end());
+        repeat_starts_.push_back(block->start());
+        repeat_ends_.push_back(block->end());
       }
+    }
+
+    if (!alignment_model_params_.empty()){
+        AlnModel = new AlignmentModel(10, alignment_model_params_[0], alignment_model_params_[1],
+                                          alignment_model_params_[2], alignment_model_params_[3],
+                                          alignment_model_params_[4], alignment_model_params_[5],
+                                          alignment_model_params_[6]);
+    }
+    else {
+        AlnModel = new AlignmentModel(10, -1.0, -0.458675, -1.0, -0.458675, -0.00005800168, -10.448214728, -10.448214728); //default values from Dindel model, works best for Illumina reads and PacBio HiFi
     }
   }
 
