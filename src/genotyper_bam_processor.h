@@ -91,7 +91,7 @@ private:
     vcf_writer_.write_header(header);
   }
   bool skip_assembly_;
-
+  std::vector<float> alignment_parameters_;
 public:
  GenotyperBamProcessor(bool use_bam_rgs, bool remove_pcr_dups) : SNPBamProcessor(use_bam_rgs, remove_pcr_dups){
     output_stutter_models_ = false;
@@ -155,7 +155,10 @@ public:
   }
   void skip_assembly(){
 	skip_assembly_ = true;
-}
+ }
+  void set_alignment_params(std::vector<float>& alignment_parameters){
+    alignment_parameters_ = alignment_parameters;
+ }
 
   void set_output_viz(const std::string& viz_file){
     output_viz_ = true;
