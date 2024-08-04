@@ -35,45 +35,38 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "Required parameters:" << "\n"
 	    << "\t" << "--bams          <list_of_bams>        "  << "\t" << "Comma separated list of BAM/CRAM files. Either --bams or --bam-files must be specified"   << "\n"
 	    << "\t" << "--fasta         <genome.fa>           "  << "\t" << "FASTA file containing all of the relevant sequences for your organism   "                 << "\n"
-	    << "\t" << "                                      "  << "\t" << "  When analyzing CRAMs, this FASTA file must match the file used for compression"         << "\n"
+	    << "\t" << "                                      "  << "\t" << "When analyzing CRAMs, this FASTA file must match the file used for compression"         << "\n"
 	    << "\t" << "--regions       <region_file.bed>     "  << "\t" << "BED file containing coordinates for each TR region"                                      << "\n"
-	    << "\t" << "--tr-vcf       <tr_gts.vcf.gz>      "  << "\t" << "Bgzipped VCF file to which TR genotypes will be written"                                 << "\n" << "\n"
+	    << "\t" << "--tr-vcf        <tr_gts.vcf.gz>       "  << "\t" << "Bgzipped VCF file to which TR genotypes will be written"                                 << "\n" << "\n"
 
 	    << "Optional input parameters:" << "\n"
 	    << "\t" << "--bam-files  <bam_files.txt>          "  << "\t" << "File containing BAM/CRAM files to analyze, one per line "                              << "\n"
-	    << "\t" << "--ref-vcf    <tr_ref_panel.vcf.gz>   "  << "\t" << "Bgzipped input VCF file of a reference panel of TR genotypes. VCF alleles will be"    << "\n"
+	    << "\t" << "--ref-vcf    <tr_ref_panel.vcf.gz>    "  << "\t" << "Bgzipped input VCF file of a reference panel of TR genotypes. VCF alleles will be"    << "\n"
 	    << "\t" << "                                      "  << "\t" << " used as candidate variants instead of finding candidates in the BAMs/CRAMs (Default)" << "\n"
 	    << "\t" << "--snp-vcf    <phased_snps.vcf.gz>     "  << "\t" << "Bgzipped input VCF file containing phased SNP genotypes for the samples"               << "\n"
 	    << "\t" << "                                      "  << "\t" << " to be genotyped. These SNPs will be used to physically phase TRs "                   << "\n"
 
-	   // << "\t" << "--skip-assembly                       "  << "\t" << "Skip assembly for genotyping with long reads" << "\n"
 	    << "\t" << "--min-mean-qual       <threshold>     "  << "\t" << "Minimum average quality threshold for sequencing read data (Default = " << def_mean_qual << ")" << "\n"
 	    << "\t" << "--min-mapq            <threshold>     "  << "\t" << "Minimum MAPQ per read (Default = " << def_min_mapq << ")" << "\n"
 	    << "\t" << "--stutter-align-len   <threshold>     "  << "\t" << "Use stutter alignment for repeats with length less than threshold (Default = " << def_switch_old_align_len << ")" << "\n"
 	    << "\t" << "--phased-bam	                      "  << "\t" << "Use phasing information from haplotagged sequencing data." << "\n"
 	    << "\t" << "--indel-flank-len     <max_bp>        "  << "\t" << "Include InDels in max_bp base pair around repeat as part of the repeath (Default = " << def_indel_flank_len << ")" << "\n"
-	    //<< "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
+	    << "\t" << "--alignment-params    <list_of_params>"  << "\t" << "Comma-separated parameters for alignment model. Refer to GitHub for more details." << "\n"
+	    << "\t" << "--stutter-in <stutter_models.txt>     "  << "\t" << "Use stutter models in the file to genotype STRs (Default = Learn via EM algorithm)"    << "\n" << "\n"
 
 	    << "Optional output parameters:" << "\n"
 	    << "\t" << "--log           <log.txt>             "  << "\t" << "Output the log information to the provided file (Default = Standard error)"         << "\n"
-	    //<< "\t" << "--viz-out       <aln_viz.gz>          "  << "\t" << "Output a file of each locus' alignments for visualization with VizAln or VizAlnPdf" << "\n"
-	    //<< "\t" << "--stutter-out   <stutter_models.txt>  "  << "\t" << "Output stutter models learned by the EM algorithm to the provided file"             << "\n" << "\n"
-    //    << "\t" << "--viz-left-alns                       "  << "\t" << "Output the original left aligned reads to the HTML output in addition to the "       << "\n"
-    //    << "\t" << "                                      "  << "\t" << " haplotype alignments. By default, only the latter is output"                        << "\n"
-    //    << "\t" << "--pass-bam      <used_reads.bam>      "  << "\t" << "Output a BAM file containing the reads used to genotype each region"                 << "\n"
-    //    << "\t" << "--filt-bam      <filt_reads.bam>      "  << "\t" << "Output a BAM file containing the reads filtered in each region. Each BAM entry"      << "\n"
-    //    << "\t" << "                                      "  << "\t" << " has an FT tag specifying the reason for filtering"                                  << "\n" << "\n"
-
-	//    << "Optional read filtering parameters:" << "\n"
-	    //<< "\t" << "--no-rmdup                            "  << "\t" << "Don't remove PCR duplicates. By default, they'll be removed"                         << "\n"
-	    //<< "\t" << "--use-unpaired                        "  << "\t" << "Use unpaired reads when genotyping. (Default = False)"                               << "\n"
-	    //<< "\t" << "--max-mate-dist <max_bp>              "  << "\t" << "Remove reads whose mate pair distance is > MAX_BP (Default = " << def_mdist << ")"   << "\n" << "\n"
+	    << "\t" << "--viz-out       <aln_viz.gz>          "  << "\t" << "Output a file of each locus' alignments for visualization with VizAln or VizAlnPdf" << "\n"
+	    << "\t" << "--stutter-out   <stutter_models.txt>  "  << "\t" << "Output stutter models learned by the EM algorithm to the provided file"             << "\n" << "\n"
+        << "\t" << "--pass-bam      <used_reads.bam>      "  << "\t" << "Output a BAM file containing the reads used to genotype each region"                 << "\n"
+        << "\t" << "--filt-bam      <filt_reads.bam>      "  << "\t" << "Output a BAM file containing the reads filtered in each region. Each BAM entry"      << "\n"
+        << "\t" << "                                      "  << "\t" << " has an FT tag specifying the reason for filtering"                                  << "\n" << "\n"
 
 	    << "Optional VCF formatting parameters:" << "\n"
-	    //<< "\t" << "--max-flank-indel <max_flank_frac>    "  << "\t" << "Don't output genotypes for a sample if the fraction of reads containing an indel"    << "\n"
-	    //<< "\t" << "                                      "  << "\t" << " in the sequence flanking the STR is greater than MAX_FLANK_FRAC (Default = 0.15)"   << "\n"
-    //    << "\t" << "--hide-allreads                       "  << "\t" << "Don't output the ALLREADS  FORMAT field to the VCF. By default, it will be output"   << "\n"
-    //    << "\t" << "--hide-mallreads                      "  << "\t" << "Don't output the MALLREADS FORMAT field to the VCF. By default, it will be output"   << "\n"
+	    << "\t" << "--max-flank-indel <max_flank_frac>    "  << "\t" << "Don't output genotypes for a sample if the fraction of reads containing an indel"    << "\n"
+	    << "\t" << "                                      "  << "\t" << " in the sequence flanking the STR is greater than MAX_FLANK_FRAC (Default = 0.15)"   << "\n"
+        << "\t" << "--hide-allreads                       "  << "\t" << "Don't output the ALLREADS  FORMAT field to the VCF. By default, it will be output"   << "\n"
+        << "\t" << "--hide-mallreads                      "  << "\t" << "Don't output the MALLREADS FORMAT field to the VCF. By default, it will be output"   << "\n"
 	    << "\t" << "--output-gls                          "  << "\t" << "Write genotype likelihoods to the VCF (Default = False)"                             << "\n"
 	    << "\t" << "--output-pls                          "  << "\t" << "Write phred-scaled genotype likelihoods to the VCF (Default = False)"                << "\n"
 	    << "\t" << "--output-phased-gls                   "  << "\t" << "Write phased genotype likelihoods to the VCF (Default = False)"                      << "\n"
@@ -86,23 +79,23 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--bam-libs      <list_of_libraries>   "  << "\t" << "Comma separated list of libraries in same order as BAM/CRAM files. "                 << "\n"
 	    << "\t" << "                                      "  << "\t" << "  Assign each read the library corresponding to its file. By default, "              << "\n"
 	    << "\t" << "                                      "  << "\t" << "  each read must have an RG tag and the library is determined from the LB field"     << "\n"
-	    << "\t" << "--lib-from-samp                       "  << "\t" << " Assign each read the library corresponding to its sample name. By default,  "       << "\n"
+	    << "\t" << "--lib-from-samp                       "  << "\t" << "Assign each read the library corresponding to its sample name. By default,  "       << "\n"
 	    << "\t" << "                                      "  << "\t" << "  each read must have an RG tag and the library is determined from the LB field"     << "\n" << "\n"
 
 	    << "Optional haplotype filtering parameters:" << "\n"
 	    << "\t" << "--max-haps <max_haplotypes>           "  << "\t" << "Maximum allowable candidate haplotypes for an TR (Default = " << def_max_haplotypes << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate haplotypes will not be genotyped" << "\n"
-//	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
-//	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
-//	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
+	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
+	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
+	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
 
 	    << "Other optional parameters:" << "\n"
 	    << "\t" << "--help                                "  << "\t" << "Print this help message and exit"                                                     << "\n"
 	    << "\t" << "--version                             "  << "\t" << "Print LongTR version and exit"                                                        << "\n"
 	    << "\t" << "--quiet                               "  << "\t" << "Only output terse logging messages (Default = output all messages)"                   << "\n"
 	    << "\t" << "--silent                              "  << "\t" << "Don't output any logging messages  (Default = output all messages)"                   << "\n"
-	    //<< "\t" << "--def-stutter-model                   "  << "\t" << "For each locus, use a stutter model with PGEOM=0.9 and UP=DOWN=0.05 for in-frame"     << "\n"
-	    //<< "\t" << "                                      "  << "\t" << " artifacts and PGEOM=0.9 and UP=DOWN=0.01 for out-of-frame artifacts"                 << "\n"
+	    << "\t" << "--def-stutter-model                   "  << "\t" << "For each locus, use a stutter model with PGEOM=0.9 and UP=DOWN=0.05 for in-frame"     << "\n"
+	    << "\t" << "                                      "  << "\t" << " artifacts and PGEOM=0.9 and UP=DOWN=0.01 for out-of-frame artifacts"                 << "\n"
 	    << "\t" << "--chrom              <chrom>          "  << "\t" << "Only consider TRs on this chromosome"                                                << "\n"
 	    << "\t" << "--haploid-chrs       <list_of_chroms> "  << "\t" << "Comma separated list of chromosomes to treat as haploid (Default = all diploid)"      << "\n"
 	    << "\t" << "--hap-chr-file       <hap_chroms.txt> "  << "\t" << "File containing chromosomes to treat as haploid, one per line"                        << "\n"
@@ -116,13 +109,9 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	//    << "\t" << "--fam <fam_file>                      "  << "\t" << "FAM file containing pedigree information for samples of interest. Use the pedigree"  << "\n"
      //       << "\t" << "                                      "  << "\t" << "  information to filter SNPs prior to phasing TRs (Default = use all SNPs)"         << "\n"
 
-//	    << "\n" << "\n"
-//	    << "*** Looking for answers to commonly asked questions or usage examples? ***"                     << "\n"
-//	    << "\t i.  An in-depth description of HipSTR is available at https://hipstr-tool.github.io/HipSTR"  << "\n"
-//	    << "\t ii. Check out the HipSTR tutorial at https://hipstr-tool.github.io/HipSTR-tutorial"          << "\n\n"
-//	    << "*** Found a bug/issue or have a feature request? ***"                                           << "\n"
-//	    << "\t i.  File an issue on GitHub (https://github.com/tfwillems/HipSTR)"                           << "\n"
-//	    << "\t ii. Email us at hipstrtool@gmail.com" << "\n"                                                << "\n" << std::endl;
+	    std::cout << "\n" << "\n"
+	    << "\t A more detailed documentation of LongTR is available at https://github.com/gymrek-lab/LongTR"  << "\n"
+	    << "\t Please file an issue on GitHub if you find a bug/issue or have a feature request." << "\n" << std::endl;
 }
 
 void parse_command_line_args(int argc, char** argv,
@@ -130,7 +119,7 @@ void parse_command_line_args(int argc, char** argv,
 			     std::string& haploid_chr_string, std::string& hap_chr_file,      std::string& fasta_file,        std::string& region_file,   std::string& snp_vcf_file,
 			     std::string& chrom,              std::string& bam_pass_out_file, std::string& bam_filt_out_file, std::string& ref_vcf_file,
 			     std::string& str_vcf_out_file,   std::string& fam_file,          std::string& log_file,
-			     int& bam_lib_from_samp, int& skip_genotyping, GenotyperBamProcessor& bam_processor){
+			     int& bam_lib_from_samp, int& skip_genotyping, GenotyperBamProcessor& bam_processor, std::string& alignment_params_string){
   int def_mdist             = bam_processor.MAX_MATE_DIST;
   int def_min_reads         = bam_processor.MIN_TOTAL_READS;
   int def_max_reads         = bam_processor.MAX_TOTAL_READS;
@@ -204,13 +193,14 @@ void parse_command_line_args(int argc, char** argv,
     {"skip-assembly",	   no_argument, &skip_assembly, 0},
     {"stutter-align-len",    required_argument, 0, 'O'},
     {"indel-flank-len",    required_argument, 0, 'L'},
+    {"alignment-params", required_argument, 0, 'P'},
     {0, 0, 0, 0}
   };
 
   std::string filename;
   while (true){
     int option_index = 0;
-    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:O:L:A", long_options, &option_index);
+    int c = getopt_long(argc, argv, "b:B:c:d:D:e:f:F:g:G:i:I:j:k:l:m:n:o:p:q:r:s:S:t:u:v:w:x:y:z:W:O:L:A:P", long_options, &option_index);
     if (c == -1)
       break;
 
@@ -337,6 +327,9 @@ void parse_command_line_args(int argc, char** argv,
 	case 'O':
 	bam_processor.SWITCH_OLD_ALIGN_LEN = atof(optarg);
 	break;
+    case 'P':
+    alignment_params_string = std::string(optarg);
+    break;
     case '?':
       printErrorAndDie("Unrecognized command line option");
       break;
@@ -390,13 +383,13 @@ int main(int argc, char** argv){
   GenotyperBamProcessor bam_processor(true, false);
 
   int bam_lib_from_samp = 0, skip_genotyping = 0;
-  std::string bamfile_string="", bamlist_string="", rg_sample_string="", rg_lib_string="", hap_chr_string="", hap_chr_file="";
+  std::string bamfile_string="", bamlist_string="", rg_sample_string="", rg_lib_string="", hap_chr_string="", hap_chr_file="", alignment_params_string="";
   std::string region_file="", fasta_file="", chrom="", snp_vcf_file="";
   std::string bam_pass_out_file="", bam_filt_out_file="", str_vcf_out_file="", fam_file = "", log_file = "", ref_vcf_file="";
 
   parse_command_line_args(argc, argv,
 			  bamfile_string, bamlist_string, rg_sample_string, rg_lib_string, hap_chr_string, hap_chr_file, fasta_file, region_file, snp_vcf_file,
-			  chrom, bam_pass_out_file, bam_filt_out_file, ref_vcf_file, str_vcf_out_file, fam_file, log_file, bam_lib_from_samp, skip_genotyping, bam_processor);
+			  chrom, bam_pass_out_file, bam_filt_out_file, ref_vcf_file, str_vcf_out_file, fam_file, log_file, bam_lib_from_samp, skip_genotyping, bam_processor, alignment_params_string);
 
   if (!log_file.empty())
     bam_processor.set_log(log_file);
@@ -420,8 +413,30 @@ int main(int argc, char** argv){
     printErrorAndDie("FASTA file " + fasta_file + " does not exist. Please ensure that the path provided to --fasta is a valid FASTA file");
 
   std::vector<std::string> bam_files;
-  if (!bamlist_string.empty())
-    split_by_delim(bamlist_string, ',', bam_files);
+  if (!bamlist_string.empty()) split_by_delim(bamlist_string, ',', bam_files);
+
+
+  // Checking and parsing alignment parameters
+  std::vector<std::string> alignment_params;
+  if (!alignment_params_string.empty()){
+    split_by_delim(alignment_params_string, ',', alignment_params);
+    if (alignment_params.size() != 7) printErrorAndDie("Number of alignment parameters is not correct");
+    std::vector<float> alignment_params_float;
+
+    for (auto p : alignment_params) {
+        try {
+            float f = std::stof(p);
+            if (f >= 0)
+                printErrorAndDie("LOG value " + p + " can not be positive.");
+            alignment_params_float.push_back(f); // Convert and add to the list
+        } catch (const std::invalid_argument& e) {
+            printErrorAndDie("Invalid argument: " + p + " could not be converted to float.");
+        } catch (const std::out_of_range& e) {
+            printErrorAndDie("Out of range: " + p + " is out of the range for float.");
+        }
+    }
+    bam_processor.set_alignment_params(alignment_params_float);
+  }
 
   // Read file containing BAM/CRAM paths line-by-line
   if (!bamfile_string.empty()){
