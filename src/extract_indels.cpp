@@ -38,7 +38,6 @@ bool ExtractCigar(const std::vector<CigarOp>& cigar_data, const int& cigar_start
   // Checks for boundaries
   if (region_start < cigar_start) return false;
   if (region_end   >= cigar_start+cigar_region_length) return false;
-
   // Set start index
   while (pos < region_start && cigar_start_index < cigar_data.size()) {
     bp = cigar_data[cigar_start_index].Length;
@@ -53,8 +52,9 @@ bool ExtractCigar(const std::vector<CigarOp>& cigar_data, const int& cigar_start
   cigar_start_index = last_match_index;
   if (cigar_start_index == 0){
     char type = cigar_data[cigar_start_index].Type;
-    if (!(type == 'M' || type == '=' || type == 'X'))
+    if (!(type == 'M' || type == '=' || type == 'X')){
       return false;
+      }
   }
     
   // *** Set end index *** //
@@ -75,8 +75,9 @@ bool ExtractCigar(const std::vector<CigarOp>& cigar_data, const int& cigar_start
   cigar_end_index = last_match_index;
   if (cigar_end_index == cigar_data.size()-1){
     char type = cigar_data[cigar_end_index].Type;
-    if (!(type == 'M' || type == '=' || type == 'X'))
+    if (!(type == 'M' || type == '=' || type == 'X')){
       return false;
+    }
   }
 
   bp_diff_from_ref = 0;
