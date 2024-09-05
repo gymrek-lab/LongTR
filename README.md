@@ -54,9 +54,9 @@ Additional parameters:
 * **--min-mean-qual** : Threshold for average quality of read which is based on Illumina 1.8 Phred+33 quality score system (Default 30)
 * **--max-tr-len** : Maximum length of TR that will be genotyped by LongTR (Default 1000)
 * **--min-reads** : Minimum total reads required to genotype a locus (Default = 10)
-* **--alignment-params a,b,c,d,e,f,g**: Custom sequence alignment parameters
+* **--alignment-params a,b,c,d,e,f,g** : Custom sequence alignment log probabilities
 
-Parameter | Transition
+Parameter | Transition probability (log)
 --- | -----------
 a   | Insertion to insertion (Default = -1.0)
 b   | Insertion to match (Default = -0.458675)
