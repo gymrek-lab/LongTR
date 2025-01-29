@@ -1165,7 +1165,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 
 	// If we used all reads during genotyping and performed assembly, we'll output the allele bias and Fisher strand bias
 	bool output_allele_bias = false;
-	bool output_strand_bias = false;
+	bool output_strand_bias = false; 
 
 	// Add FORMAT field
 	int num_fields;
