@@ -71,11 +71,8 @@ StutterModel* StutterModel::read(std::istream& input){
   std::istringstream ss(line);
   if (!(ss >> inframe_geom >> inframe_down >> inframe_up >> outframe_geom >> outframe_down >> outframe_up >> motif))
     printErrorAndDie("Improperly formatted stutter model file");
-  if (motif.size() != 1)
-    printErrorAndDie("Improperly formatted stutter model file. One or more entries have a motif length != 1");
-  if (motif[0] == 'A' || motif[0] == 'C' || motif[0] == 'T' || motif[0] == 'G' ||
-    motif[0] == 'a' || motif[0] == 'c' || motif[0] == 't' || motif[0] == 'g');
-    printErrorAndDie("Improperly formatted stutter model file. Invalid motif sequence");
+  if (motif.size() < 1)
+    printErrorAndDie("Improperly formatted stutter model file. One or more entries have a motif length < 1");
   return new StutterModel(inframe_geom, inframe_up, inframe_down, outframe_geom, outframe_up, outframe_down, motif);
 }
 
