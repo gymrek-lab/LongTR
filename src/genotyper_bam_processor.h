@@ -150,8 +150,8 @@ public:
     if (def_stutter_model_ != NULL)
       delete def_stutter_model_;
 
-    // The motif length will vary for each locus, but we'll use 2 so that we can utilize the constructor
-    def_stutter_model_ = new StutterModel(inframe_geom, inframe_up, inframe_down, outframe_geom, outframe_up, outframe_down, 2);
+    // The motif length will vary for each locus, but we'll use "A" so that we can utilize the constructor
+    def_stutter_model_ = new StutterModel(inframe_geom, inframe_up, inframe_down, outframe_geom, outframe_up, outframe_down, "A");
   }
   void skip_assembly(){
 	skip_assembly_ = true;
