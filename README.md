@@ -154,11 +154,11 @@ Below is an example file which contains 5 TR loci
 
 CHROM | START       | END         | MOTIF    | NAME
 ----  | ----        | ----        | ---      | ---
-chr1  | 13784267    | 13784306    | ACCC     | GATA27E01
-chr1  | 18789523    | 18789555    | CGG      | ATA008
-chr2  | 32079410    | 32079469    | CA,CG    | AGAT117
-chr17 | 38994441    | 38994492    | AG       | GATA25A04
-chr17 | 55299940    | 55299992    | TCCT     | AAT245
+chr1  | 13784267    | 13784306    | ACCC     | ID1
+chr1  | 18789523    | 18789555    | CGG      | ID2
+chr2  | 32079410    | 32079469    | CA,CG    | chr2_32079410_32079469 
+chr17 | 38994441    | 38994492    | AG       | ID4
+chr17 | 55299940    | 55299992    | TCCT     | ID5
 
 
 <a id="str-vcf"></a>
