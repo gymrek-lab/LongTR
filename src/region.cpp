@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <stdlib.h>
+#include <cstdint>
 
 #include "error.h"
 #include "region.h"
@@ -23,23 +24,22 @@ void readRegions(const std::string& input_file, uint32_t max_regions, const std:
   while (std::getline(input, line) && regions.size() < max_regions){
     num_regions++;
     std::istringstream iss(line);
-    std::string chrom, name;
+    std::string chrom, name, motif;
     int32_t start, stop;
     int period;
     double ref_copy;
-    if (!(iss >> chrom >> start >> stop >> period >> ref_copy))
-      printErrorAndDie("Improperly formatted region file. \nRequired format is tab-delimited columns CHROM START STOP PERIOD NCOPIES\n Bad line: " + line);
+    if (!(iss >> chrom >> start >> stop >> motif))
+      printErrorAndDie("Improperly formatted region file. \nRequired format is tab-delimited columns CHROM START STOP MOTIF\n Bad line: " + line);
     if (start < 1)      printErrorAndDie("Improperly formatted region file. \n Region has a START < 1, but START must be >= 1\n Bad line: " + line);
     if (stop <= start)  printErrorAndDie("Improperly formatted region file. \n Region has a STOP <= START. Bad line: " + line);
-    if (period < 1)     printErrorAndDie("Improperly formatted region file. \n Region has a PERIOD < 1. Bad line: " + line);
-    //if (period > 9)     printErrorAndDie("Improperly formatted region file. \n Region has a PERIOD > 9. Bad line: " + line);
+    if (motif.size() < 1)     printErrorAndDie("Improperly formatted region file. \n Region has a MOTIF with size < 1. Bad line: " + line);
 
     if (!chrom_limit.empty() && chrom.compare(chrom_limit) != 0)
       continue;
     if (iss >> name)
-      regions.push_back(Region(chrom, start-1, stop, period, name));
+      regions.push_back(Region(chrom, start-1, stop, motif, name));
     else
-      regions.push_back(Region(chrom, start-1, stop, period));
+      regions.push_back(Region(chrom, start-1, stop, motif));
   }
   input.close();
   logger << "Region file contains " << num_regions << " regions";

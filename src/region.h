@@ -10,53 +10,79 @@
 #include <string>
 #include <vector>
 #include <stdlib.h>
+#include <cstdint>
 
 #include "error.h"
 
-class Region{
+
+class Region {
 private:
-  std::string chrom_, name_;
-  int32_t start_, stop_;
-  int period_;
+    std::string chrom_, name_, motifs_;
+    int32_t start_, stop_;
+    int period_;
+
+    // Helper function to compute the period
+
+    std::vector<std::string> splitMotifs(const std::string& motifs, char delimiter = ',') {
+        std::vector<std::string> result;
+        std::stringstream ss(motifs);
+        std::string item;
+
+        while (std::getline(ss, item, delimiter)) {
+            result.push_back(item);
+        }
+
+        return result;
+    }
+    int computePeriod(const std::string& motifs) {
+        std::vector<std::string> motif_list = splitMotifs(motifs);
+        std::set<int> period_list;
+        for (const auto& motif : motif_list) {
+            period_list.insert(motif.size());
+        }
+        return (period_list.size() == 1) ? *period_list.begin() : -1;
+    }
+
 public:
- Region(const std::string& chrom, int32_t start, int32_t stop, int period)
-   : chrom_(chrom){
-    assert(stop > start);
-    start_ = start; stop_ = stop; period_ = period;
-  }
+    // Constructors
+    Region(const std::string& chrom, int32_t start, int32_t stop, const std::string& motifs)
+        : chrom_(chrom), start_(start), stop_(stop), motifs_(motifs), period_(computePeriod(motifs)) {
+        assert(stop > start);
+    }
 
-  Region(const std::string& chrom, int32_t start, int32_t stop, int period, const std::string& name)
-    : chrom_(chrom), name_(name){
-    assert(stop > start);
-    start_ = start; stop_ = stop; period_ = period;
-  }
+    Region(const std::string& chrom, int32_t start, int32_t stop, const std::string& motifs, const std::string& name)
+        : chrom_(chrom), name_(name), start_(start), stop_(stop), motifs_(motifs), period_(computePeriod(motifs)) {
+        assert(stop > start);
+    }
 
-  const std::string& chrom() const { return chrom_;  }
-  const std::string& name()  const { return name_;   }
-  int32_t start()            const { return start_;  }
-  int32_t  stop()            const { return stop_;   }
-  int     period()           const { return period_; }
-  Region*   copy()           const { return new Region(chrom_, start_, stop_, period_, name_); }
+    // Getters
+    const std::string& chrom() const { return chrom_; }
+    const std::string& name()  const { return name_; }
+    int32_t start()           const { return start_; }
+    int32_t stop()            const { return stop_; }
+    int period()              const { return period_; }
+    const std::string& motif() const { return motifs_; }
 
-  void set_start(int32_t start){ start_ = start; }
-  void set_stop(int32_t stop)  { stop_  = stop;  }
+    // Clone function
+    Region* copy() const { return new Region(chrom_, start_, stop_, motifs_, name_); }
 
-  std::string str() const {
-    std::stringstream ss;
-    ss << chrom_ << ":" << start_ << "-" << stop_;
-    return ss.str();
-  }
+    // Setters
+    void set_start(int32_t start) { start_ = start; }
+    void set_stop(int32_t stop) { stop_ = stop; }
 
-  bool operator<(const Region &r) const {
-    if (chrom_.compare(r.chrom()) != 0)
-      return chrom_.compare(r.chrom()) < 0;
-    if (start_ != r.start())
-      return start_ < r.start();
-    if (stop_ != r.stop())
-      return stop_ < r.stop();
-    return false;
-  }
+    // String representation
+    std::string str() const {
+        std::stringstream ss;
+        ss << chrom_ << ":" << start_ << "-" << stop_;
+        return ss.str();
+    }
 
+    // Comparison operator for sorting
+    bool operator<(const Region& r) const {
+        if (chrom_ != r.chrom()) return chrom_ < r.chrom();
+        if (start_ != r.start()) return start_ < r.start();
+        return stop_ < r.stop();
+    }
 };
 
 void readRegions(const std::string& input_file, uint32_t max_regions, const std::string& chrom_limit, std::vector<Region>& regions, std::ostream& logger);
