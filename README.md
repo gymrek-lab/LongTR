@@ -202,9 +202,7 @@ GLDIFF    | Difference in likelihood between the reported and next best genotype
 DSNP      | Total number of reads with SNP information
 PSNP      | Number of reads with SNPs supporting each haploid genotype
 DFLANKINDEL | Number of reads with an indel in the regions flanking the TR
-AB        | log10 of the allele bias p-value, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
 FS        | log10 of the strand bias p-value from Fisher's exact test, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
-DAB       | Number of reads used in the allele bias calculation
 ALLREADS  | Base pair difference observed in each read's Needleman-Wunsch alignment
 MALLREADS | Maximum likelihood bp diff in each read based on haplotype alignments
 GL        | log-10 genotype likelihoods
