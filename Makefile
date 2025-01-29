@@ -37,7 +37,7 @@ OBJ_SEQALN  := $(SRC_SEQALN:.cpp=.o)
 OBJ_DENOVO  := $(SRC_DENOVO:.cpp=.o)
 
 .PHONY: all
-all: SPOA-docker HTSLIB-docker LongTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
+all: HTSLIB-docker SPOA-docker LongTR DenovoFinder test/fast_ops_test test/haplotype_test test/read_vcf_alleles_test test/snp_tree_test test/vcf_snp_tree_test
 
 # Create a tarball with static binaries
 .PHONY: static-dist
@@ -110,7 +110,7 @@ SPOA-docker: SPOA-update
 		cd lib/spoa/build && cmake -DCMAKE_BUILD_TYPE=Release .. && cd .. && make -C build;\
 	fi
 
-LongTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(CEPHES_LIB) $(HTSLIB_LIB) $(OBJ_SEQALN)
+LongTR: $(OBJ_COMMON) $(OBJ_HIPSTR) $(HTSLIB_LIB) $(OBJ_SEQALN)
 	$(CXX) $(LDFLAGS) $(CXXFLAGS) $(INCLUDE) -o $@ $^ $(LIBS)
 
 DenovoFinder: $(OBJ_DENOVO) $(HTSLIB_LIB)
@@ -147,5 +147,5 @@ test/vcf_snp_tree_test: test/vcf_snp_tree_test.cpp src/error.cpp src/snp_tree.cp
 
 # Rebuild CEPHES library if needed
 $(CEPHES_LIB):
-	cd lib/cephes && $(MAKE)
+	cd lib/cephes && $(MAKE) -fPIE -pie
 
