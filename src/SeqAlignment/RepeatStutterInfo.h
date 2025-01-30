@@ -23,7 +23,7 @@ class RepeatStutterInfo {
 
  public:
   RepeatStutterInfo(int period, const std::string& ref_allele, const StutterModel* stutter_model){
-    assert(stutter_model != NULL && period > 0);
+    assert(stutter_model != NULL);
     period_        = period;
     max_ins_       = MAX_STUTTER_REPEAT_INS*period_;
     max_del_       = MAX_STUTTER_REPEAT_DEL*period_;

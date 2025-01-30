@@ -57,7 +57,7 @@ void EMStutterGenotyper::recalc_log_gt_priors(){
 
 void EMStutterGenotyper::init_stutter_model(){
   delete stutter_model_;
-  stutter_model_ = new StutterModel(0.9, 0.1, 0.1, 0.8, 0.01, 0.01, motif_len_);
+  stutter_model_ = new StutterModel(0.9, 0.1, 0.1, 0.8, 0.01, 0.01, motif_);
 }
   
 void EMStutterGenotyper::recalc_stutter_model(){
@@ -123,7 +123,7 @@ void EMStutterGenotyper::recalc_stutter_model(){
   double out_pdown_hat       = exp(out_log_total_down - log_total);
 
   // Update stutter model
-  stutter_model_ = new StutterModel(in_pgeom_hat, in_pup_hat, in_pdown_hat, out_pgeom_hat, out_pup_hat, out_pdown_hat, motif_len_);
+  stutter_model_ = new StutterModel(in_pgeom_hat, in_pup_hat, in_pdown_hat, out_pgeom_hat, out_pup_hat, out_pdown_hat, motif_);
 }
 
 void EMStutterGenotyper::init_log_sample_priors(double* log_sample_ptr){

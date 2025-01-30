@@ -140,26 +140,25 @@ LongTR can analyze both BAM and CRAM files simultaneously, so if your project co
 <a id="str-bed"></a>
 
 ### TR region BED file
-The BED file containing each TR region of interest is a tab-delimited file comprised of 5 required columns and one optional column: 
+The BED file containing each TR region of interest is a tab-delimited file comprised of 4 required columns and one optional column: 
 
 1. The name of the chromosome on which the TR is located
 2. The 1-based start position of the TR on its chromosome
 3. The end position of the TR on its chromosome
-4. The motif length (i.e. the number of bases in the repeat unit)
-5. The number of copies of the repeat unit in the reference allele
+4. The repeat motif (it can be one or more, separated by commas (","))
 
-The 6th column is optional and contains the name of the TR locus, which will be written to the ID column in the VCF. 
+The 5th column is optional and contains the name of the TR locus, which will be written to the ID column in the VCF. 
 Below is an example file which contains 5 TR loci 
 
 **NOTE: The table header is for descriptive purposes. The BED file should not have a header**
 
-CHROM | START       | END         | MOTIF_LEN | NUM_COPIES | NAME
-----  | ----        | ----        | ---       | ---        | ---
-chr1  | 13784267    | 13784306    | 4         | 10         | GATA27E01
-chr1  | 18789523    | 18789555    | 3         | 11         | ATA008
-chr2  | 32079410    | 32079469    | 4         | 15         | AGAT117
-chr17 | 38994441    | 38994492    | 4         | 12         | GATA25A04
-chr17 | 55299940    | 55299992    | 4         | 13         | AAT245
+CHROM | START       | END         | MOTIF    | NAME
+----  | ----        | ----        | ---      | ---
+chr1  | 13784267    | 13784306    | ACCC     | ID1
+chr1  | 18789523    | 18789555    | CGG      | ID2
+chr2  | 32079410    | 32079469    | CA,CG    | chr2_32079410_32079469 
+chr17 | 38994441    | 38994492    | AG       | ID4
+chr17 | 55299940    | 55299992    | TCCT     | ID5
 
 
 <a id="str-vcf"></a>
@@ -168,14 +167,15 @@ chr17 | 55299940    | 55299992    | 4         | 13         | AAT245
 For more information on the VCF file format, please see the [VCF spec](http://samtools.github.io/hts-specs/VCFv4.2.pdf). 
 
 #### INFO fields
-INFO fields contains aggregated statistics about each genotyped TR in the VCF. The INFO fields reported by LongTR primarily describe the TR's reference coordinates (START and END) and information about the allele counts (AC) and number of reads used to genotype all samples (DP).
+INFO fields contain aggregated statistics about each genotyped TR in the VCF. The INFO fields reported by LongTR primarily describe the TR's reference coordinates (START and END) and information about the allele counts (AC) and number of reads used to genotype all samples (DP).
 
 FIELD | DESCRIPTION
 ----- | -----------
 BPDIFFS        | Base pair difference of each alternate allele from the reference allele
-START          | Inclusive start coodinate for the repetitive portion of the reference allele
+START          | Inclusive start coordinate for the repetitive portion of the reference allele
 END            | Inclusive end coordinate for the repetitive portion of the reference allele
-PERIOD         | Length of TR motif
+MOTIF	       | Motif of the repeat
+PERIOD         | Length of TR motif if unique, otherwise -1
 AN             | Total number of alleles in called genotypes
 REFAC          | Reference allele count
 AC             | Alternate allele counts
@@ -187,7 +187,7 @@ DSNP           | Total number of reads with SNP information
 DFLANKINDEL    | Total number of reads with an indel in the regions flanking the TR
 
 #### FORMAT fields
-FORMAT fields contain information about the genotype for each sample at the locus. In addition to the most probable phased genotype (GT), LongTR reports information about the posterior likelihood of this genotype (PQ) and its unphased analog (Q). Other useful information reported are the number of reads that were used to determine the genotype (DP) and whether these had any alignment artifacts (DFLANKINDEL).
+FORMAT fields contain information about the genotype for each sample at the locus. In addition to the most probable phased genotype (GT), LongTR reports information about the posterior likelihood of this genotype (PQ) and its unphased analog (Q). Other useful information reported is the number of reads that were used to determine the genotype (DP) and whether these had any alignment artifacts (DFLANKINDEL).
 
 FIELD     | DESCRIPTION
 --------- | -----------
@@ -202,9 +202,7 @@ GLDIFF    | Difference in likelihood between the reported and next best genotype
 DSNP      | Total number of reads with SNP information
 PSNP      | Number of reads with SNPs supporting each haploid genotype
 DFLANKINDEL | Number of reads with an indel in the regions flanking the TR
-AB        | log10 of the allele bias pvalue, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
-FS        | log10 of the strand bias pvalue from Fisher's exact test, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
-DAB       | Number of reads used in the allele bias calculation
+FS        | log10 of the strand bias p-value from Fisher's exact test, where 0 is no bias and more negative values are increasingly biased. 0 for all homozygous genotypes
 ALLREADS  | Base pair difference observed in each read's Needleman-Wunsch alignment
 MALLREADS | Maximum likelihood bp diff in each read based on haplotype alignments
 GL        | log-10 genotype likelihoods

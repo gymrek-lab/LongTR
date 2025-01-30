@@ -28,10 +28,11 @@ class StutterModel {
   double out_log_up_, out_log_down_;
   
   int motif_len_;
+  std::string motif_;
 
  public:
   StutterModel(double inframe_geom,  double inframe_up,  double inframe_down, 
-	       double outframe_geom, double outframe_up, double outframe_down, int motif_len){
+	       double outframe_geom, double outframe_up, double outframe_down, std::string motif){
     assert(inframe_geom  > 0.0 && inframe_geom  < 1.0);
     assert(outframe_geom > 0.0 && outframe_geom < 1.0);
     assert(inframe_up    > 0.0 && inframe_down  > 0.0);
@@ -56,7 +57,8 @@ class StutterModel {
     out_log_down_   = log(outframe_down);
 
     log_equal_      = log(1-inframe_up-inframe_down-outframe_up-outframe_down);
-    motif_len_      = motif_len;
+    motif_      = motif;
+    motif_len_ = motif.size();
  }
 
   bool parameters_within_threshold(StutterModel& other, double max_diff){
@@ -66,7 +68,7 @@ class StutterModel {
 
   friend std::ostream& operator<< (std::ostream &out, StutterModel& model);
 
-  StutterModel* copy() const { return new StutterModel(in_geom_, in_up_, in_down_, out_geom_, out_up_, out_down_, motif_len_); }
+  StutterModel* copy() const { return new StutterModel(in_geom_, in_up_, in_down_, out_geom_, out_up_, out_down_, motif_); }
 
   double get_parameter(bool in_frame, char parameter) const;
 
@@ -74,6 +76,7 @@ class StutterModel {
 
   int period() const { return motif_len_; }
   void set_period(int period){ motif_len_ = period; }
+  std::string motif() const { return motif_;}
 
   void write(std::ostream& output) const;
 

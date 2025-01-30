@@ -25,7 +25,6 @@
 #include "SeqAlignment/RepeatStutterInfo.h"
 #include "SeqAlignment/RepeatBlock.h"
 
-#include "cephes/cephes.h"
 #include "htslib/kfunc.h"
 
 int max_index(double* vals, unsigned int num_vals){
@@ -865,19 +864,20 @@ double SeqStutterGenotyper::compute_allele_bias(int hap_a_read_count, int hap_b_
 	// Compute p-value for allele read depth bias according to the counts of reads uniquely assigned to each haplotype
 	// We use the bdtr(k, N, p) function from the cephes directory, which computes the CDF for a binomial distribution
 	// e.g.: double val = bdtr (24, 50, 0.5);
-	int total = hap_a_read_count + hap_b_read_count;
-
-	// Not applicable
-	if (total == 0)
-		return 1;
-
-	// p-value is 1
-	if (hap_a_read_count == hap_b_read_count)
-		return 0.0;
-
-	int min_count = std::min(hap_a_read_count, hap_b_read_count);
-	double pvalue = 2*bdtr(min_count, total, 0.5); // Two-sided pvalue
-	return log10(std::min(1.0, pvalue));
+//	int total = hap_a_read_count + hap_b_read_count;
+//
+//	// Not applicable
+//	if (total == 0)
+//		return 1;
+//
+//	// p-value is 1
+//	if (hap_a_read_count == hap_b_read_count)
+//		return 0.0;
+//
+//	int min_count = std::min(hap_a_read_count, hap_b_read_count);
+//	double pvalue = 2*bdtr(min_count, total, 0.5); // Two-sided pvalue
+//	return log10(std::min(1.0, pvalue));
+    return -1;
 }
 
 void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sample_names, const std::string& chrom_seq,
@@ -1119,6 +1119,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	//	<< "OUTFRAME_DOWN="   << stutter_model->get_parameter(false, 'D') << ";"
 		<< "START="           << region.start()+1 << ";"
 		<< "END="             << region.stop()    << ";"
+		<< "MOTIF="           << region.motif()   << ";"
 		<< "PERIOD="          << region.period()  << ";"
 		<< "NSKIP="           << skip_count       << ";"
 		<< "NFILT="           << filt_count       << ";"
@@ -1163,8 +1164,8 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	}
 
 	// If we used all reads during genotyping and performed assembly, we'll output the allele bias and Fisher strand bias
-	bool output_allele_bias = (!haploid_ && reassemble_flanks_);
-	bool output_strand_bias = (!haploid_ && reassemble_flanks_);
+	bool output_allele_bias = false;
+	bool output_strand_bias = false; 
 
 	// Add FORMAT field
 	int num_fields;

@@ -15,12 +15,13 @@
 
 class EMStutterGenotyper: public Genotyper {
  private:
-  int motif_len_;                     // Number of base pairs in STR motif
+  std::string motif_;                     // Number of base pairs in STR motif
   int* allele_index_;                 // Index of each read's STR size
   StutterModel* stutter_model_;
   std::vector<int> bps_per_allele_;   // Size of each STR allele in bps
   std::vector<int> reads_per_sample_; // Number of reads for each sample
   double* log_gt_priors_;
+  int motif_len_;
 
   bool use_pop_freqs_;
 
@@ -47,13 +48,14 @@ class EMStutterGenotyper: public Genotyper {
   EMStutterGenotyper& operator=(const EMStutterGenotyper& other);
 
  public:
- EMStutterGenotyper(bool haploid, int motif_length,
+ EMStutterGenotyper(bool haploid, std::string motif,
 		    const std::vector< std::vector<int> >& num_bps,
 		    const std::vector< std::vector<double> >& log_p1,
 		    const std::vector< std::vector<double> >& log_p2,
 		    const std::vector<std::string>& sample_names, int ref_allele): Genotyper(haploid, sample_names, log_p1, log_p2){
     assert(num_bps.size() == log_p1.size() && num_bps.size() == log_p2.size() && num_bps.size() == sample_names.size());
-    motif_len_     = motif_length;
+    motif_     = motif;
+    motif_len_ = motif_.size();
     use_pop_freqs_ = false;
 
     // Compute the set of allele sizes

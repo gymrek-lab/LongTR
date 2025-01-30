@@ -205,7 +205,7 @@ StutterModel* GenotyperBamProcessor::learn_stutter_model(std::vector<BamAlnList>
   }
 
   selective_logger() << "Building EM stutter model" << std::endl;
-  EMStutterGenotyper length_genotyper(haploid, region.period(), str_bp_lengths, str_log_p1s, str_log_p2s, rg_names, 0);
+  EMStutterGenotyper length_genotyper(haploid, region.motif(), str_bp_lengths, str_log_p1s, str_log_p2s, rg_names, 0);
   selective_logger() << "Training EM stutter model" << std::endl;
   bool trained = length_genotyper.train(MAX_EM_ITER, ABS_LL_CONVERGE, FRAC_LL_CONVERGE, false, selective_logger());
   if (trained){

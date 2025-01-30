@@ -65,17 +65,15 @@ void StutterModel::write_model(const std::string& chrom, int32_t start, int32_t 
 StutterModel* StutterModel::read(std::istream& input){
   double inframe_geom,  inframe_up,  inframe_down;
   double outframe_geom, outframe_up, outframe_down;
-  int motif_len;
+  std::string motif;
   std::string line;
   std::getline(input, line);
   std::istringstream ss(line);
-  if (!(ss >> inframe_geom >> inframe_down >> inframe_up >> outframe_geom >> outframe_down >> outframe_up >> motif_len))
+  if (!(ss >> inframe_geom >> inframe_down >> inframe_up >> outframe_geom >> outframe_down >> outframe_up >> motif))
     printErrorAndDie("Improperly formatted stutter model file");
-  if (motif_len < 1)
+  if (motif.size() < 1)
     printErrorAndDie("Improperly formatted stutter model file. One or more entries have a motif length < 1");
-  if (motif_len > 9)
-    printErrorAndDie("Improperly formatted stutter model file. One or more entries have a motif length > 9");
-  return new StutterModel(inframe_geom, inframe_up, inframe_down, outframe_geom, outframe_up, outframe_down, motif_len);
+  return new StutterModel(inframe_geom, inframe_up, inframe_down, outframe_geom, outframe_up, outframe_down, motif);
 }
 
 void StutterModel::read_models(std::istream& input, std::map<Region, StutterModel*>& models){
@@ -85,7 +83,7 @@ void StutterModel::read_models(std::istream& input, std::map<Region, StutterMode
     int32_t start, end;
     if(input >> chrom >> start >> end){
       StutterModel* model = read(input);
-      models.insert(std::pair<Region,StutterModel*>(Region(chrom, start, end, model->period()), model));
+      models.insert(std::pair<Region,StutterModel*>(Region(chrom, start, end, model->motif()), model));
     }
     else
       break;
