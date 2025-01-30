@@ -8,9 +8,20 @@
 #include <vector>
 #include <stdlib.h>
 #include <cstdint>
+#include <cctype>
 
 #include "error.h"
 #include "region.h"
+
+
+bool isValidMotif(const std::string& motif) {
+    for (char ch : motif) {
+        if (!std::isalpha(ch) && ch != ',') {
+            return false;
+        }
+    }
+    return true;
+}
 
 void readRegions(const std::string& input_file, uint32_t max_regions, const std::string& chrom_limit, std::vector<Region>& regions, std::ostream& logger){
   logger << "Reading region file " << input_file << std::endl;
@@ -33,6 +44,8 @@ void readRegions(const std::string& input_file, uint32_t max_regions, const std:
     if (start < 1)      printErrorAndDie("Improperly formatted region file. \n Region has a START < 1, but START must be >= 1\n Bad line: " + line);
     if (stop <= start)  printErrorAndDie("Improperly formatted region file. \n Region has a STOP <= START. Bad line: " + line);
     if (motif.size() < 1)     printErrorAndDie("Improperly formatted region file. \n Region has a MOTIF with size < 1. Bad line: " + line);
+    if (!isValidMotif(motif)) printErrorAndDie("Improperly formatted region file. \n Region has a MOTIF with invalid character. Bad line: " + line);
+
 
     if (!chrom_limit.empty() && chrom.compare(chrom_limit) != 0)
       continue;

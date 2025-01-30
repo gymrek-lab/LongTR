@@ -89,6 +89,9 @@ void readRegions(const std::string& input_file, uint32_t max_regions, const std:
 
 void orderRegions(std::vector<Region>& regions);
 
+
+bool isValidMotif(const std::string& motif);
+
 class RegionGroup {
   std::vector<Region> regions_;
   std::string chrom_;
