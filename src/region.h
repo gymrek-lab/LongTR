@@ -23,7 +23,7 @@ private:
 
     // Helper function to compute the period
 
-    std::vector<std::string> splitMotifs(const std::string& motifs, char delimiter = ',') {
+    std::vector<std::string> splitMotifs(const std::string& motifs, char delimiter = ',') const {
         std::vector<std::string> result;
         std::stringstream ss(motifs);
         std::string item;
@@ -42,6 +42,9 @@ private:
         }
         return (period_list.size() == 1) ? *period_list.begin() : -1;
     }
+
+
+
 
 public:
     // Constructors
@@ -62,6 +65,16 @@ public:
     int32_t stop()            const { return stop_; }
     int period()              const { return period_; }
     const std::string& motif() const { return motifs_; }
+    std::string period_str() const {
+        std::vector<std::string> motif_list = splitMotifs(motif());
+        std::ostringstream oss;
+        for (int i = 0; i < motif_list.size(); ++i) {
+            if (i > 0) oss << ",";
+            oss << motif_list[i].size();
+        }
+        return oss.str();
+    }
+
 
     // Clone function
     Region* copy() const { return new Region(chrom_, start_, stop_, motifs_, name_); }
