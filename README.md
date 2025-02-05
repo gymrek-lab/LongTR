@@ -175,7 +175,7 @@ BPDIFFS        | Base pair difference of each alternate allele from the referenc
 START          | Inclusive start coordinate for the repetitive portion of the reference allele
 END            | Inclusive end coordinate for the repetitive portion of the reference allele
 MOTIF	       | Motif of the repeat
-PERIOD         | Length of TR motif if unique, otherwise -1
+PERIOD         | Length of TR motif(s)
 AN             | Total number of alleles in called genotypes
 REFAC          | Reference allele count
 AC             | Alternate allele counts
