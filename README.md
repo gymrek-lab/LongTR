@@ -1,5 +1,9 @@
 The repository is a modified version of the [HipSTR](https://github.com/HipSTR-Tool/HipSTR) tool, which was initially designed for genotyping Short Tandem Repeats (STRs) using Illumina sequencing data. The code of HipSTR has been tailored to enhance its performance specifically for long reads (PacBio HiFi and Oxford Nanopore) to genotype both STRs and VNTRs. The documentation presented below predominantly derives from the original documentation, with certain sections having been either added or omitted.
 
+## Early version warning 
+
+LongTR is currently under active development, please expect some changes to the input parameters, input file formats, and output VCF file. 
+
 
 # LongTR
 
