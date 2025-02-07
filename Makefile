@@ -148,6 +148,3 @@ test/vcf_snp_tree_test: test/vcf_snp_tree_test.cpp src/error.cpp src/snp_tree.cp
 # Rebuild CEPHES library if needed
 $(CEPHES_LIB):
 	cd lib/cephes && $(MAKE) -fPIE -pie
-
-
-
