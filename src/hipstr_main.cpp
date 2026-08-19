@@ -99,6 +99,11 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "                                      "  << "\t" << " max_hap_len, work, hap_build_sec, hap_aln_sec) for k calibration (Default = off)" << "\n"
 	    << "\t" << "--log-alt-alleles                   "  << "\t" << "Emit one ALT_ALLELE line per VCF ALT with its admission reason" << "\n"
 	    << "\t" << "                                      "  << "\t" << " (STRONG/AGGREGATE/VCF) + support and calling counts (Default = off)" << "\n"
+	    << "\t" << "--assemble-flanks                     "  << "\t" << "Assemble the sequences flanking each TR from the reads using a de Bruijn graph." << "\n"
+	    << "\t" << "                                      "  << "\t" << " This detects non-reference flanks and rejects loci whose flanks are too" << "\n"
+	    << "\t" << "                                      "  << "\t" << " repetitive to align reliably (Default = off, flanks are not assembled)" << "\n"
+	    << "\t" << "                                      "  << "\t" << " --skip-assembly is a deprecated alias for this option: despite its name it" << "\n"
+	    << "\t" << "                                      "  << "\t" << " turns flank assembly ON rather than off. Prefer --assemble-flanks" << "\n"
 	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
 	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
@@ -154,6 +159,8 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
 
+  // skip_assembly defaults to 1, i.e. flank assembly is off unless asked for. Both --assemble-flanks and its
+  // deprecated alias --skip-assembly clear it to 0, which is what turns flank assembly on.
   int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 1, indel_flank_len = 5, switch_old_align_len = 0;
 
   static struct option long_options[] = {
@@ -207,7 +214,8 @@ void parse_command_line_args(int argc, char** argv,
     {"quiet",              no_argument, &quiet_log, 1},
     {"silent",             no_argument, &silent_log, 1},
     {"skip-genotyping",    no_argument, &skip_genotyping, 1},
-    {"skip-assembly",	   no_argument, &skip_assembly, 0},
+    {"assemble-flanks",    no_argument, &skip_assembly, 0},
+    {"skip-assembly",	   no_argument, &skip_assembly, 0}, // deprecated alias for --assemble-flanks: it turns assembly ON, not off
     {"stutter-align-len",    required_argument, 0, 'O'},
     {"indel-flank-len",    required_argument, 0, 'L'},
     {"alignment-params", required_argument, 0, 'P'},
@@ -412,7 +420,7 @@ void parse_command_line_args(int argc, char** argv,
     bam_processor.use_phased_bam_tags();
     bam_processor.full_logger() << "Using phased BAM tags to genotype and phase TRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
   }
-  if (skip_assembly == 1){
+  if (skip_assembly == 1){ // neither --assemble-flanks nor --skip-assembly was given, so leave flank assembly off
     bam_processor.skip_assembly();
   }
 }	
