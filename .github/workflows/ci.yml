@@ -36,6 +36,9 @@ jobs:
       - name: Determinism test (identical input -> identical VCF)
         run: bash test_data/determinism_fixture/run_determinism_test.sh ./LongTR
 
+      - name: BPDIFFS test (<DEL> length is tract-relative)
+        run: bash test_data/del_bpdiffs_fixture/run_del_bpdiffs_test.sh ./LongTR
+
   portable-build:
     name: Portable static build (Alpine / musl)
     runs-on: ubuntu-latest
@@ -69,6 +72,9 @@ jobs:
 
       - name: Determinism test (identical input -> identical VCF)
         run: bash test_data/determinism_fixture/run_determinism_test.sh ./dist/LongTR
+
+      - name: BPDIFFS test (<DEL> length is tract-relative)
+        run: bash test_data/del_bpdiffs_fixture/run_del_bpdiffs_test.sh ./dist/LongTR
 
       - name: Package portable binaries (stripped + debug)
         id: pkg

@@ -1000,7 +1000,12 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<int> allele_bp_diffs;
 	for (unsigned int i = 0; i < alleles.size(); i++){
 	    if (alleles[i] == "<DEL>") {
-	        allele_bp_diffs.push_back(-(int)alleles[0].size());
+	        // <DEL> is always a deletion of the whole repeat tract, so its length difference is the
+	        // tract length. Measure it against the catalog tract (region.stop()-region.start(), which is
+	        // identically END-START+1 as those are emitted below), NOT against alleles[0]: the emitted
+	        // REF also carries any flanking sequence retained for this locus, which is sample-dependent
+	        // and would make BPDIFFS differ between samples that deleted the very same tract.
+	        allele_bp_diffs.push_back(-(int)(region.stop() - region.start()));
 	        continue;
 	    }
 		allele_bp_diffs.push_back((int)alleles[i].size() - (int)alleles[0].size());
