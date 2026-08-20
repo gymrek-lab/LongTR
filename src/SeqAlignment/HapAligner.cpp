@@ -238,12 +238,13 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   left_prob = 0.0;
   std::string read_seq = seq_0;
-  if (haplotype->get_seq().size() <= 60){ //TODO, it usually happens in case of big deletions
+  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
+  const int trim = std::max(0, REF_FLANK_LEN - INDEL_FLANK_LEN); // clamped: a negative count wraps in substr's unsigned pos
+  if (haplotype->get_seq().size() <= (size_t)(2*trim)){ //TODO, it usually happens in case of big deletions
     left_prob = IMPOSSIBLE;
     return;
   }
-  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
-  std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
+  std::string haplotype_seq = haplotype->get_seq().substr(trim, haplotype->get_seq().size() - 2*trim);
   int n = haplotype_seq.size();
   int m = read_seq.size();
    if (abs(n - m) > 600){
