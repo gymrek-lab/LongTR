@@ -186,7 +186,7 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
         // std::random_device, reseeding from system entropy each time, which made the POA consensus --
         // and therefore the candidate haplotypes, the admitted ALT alleles and the genotype calls --
         // differ between identical runs at every locus with a cluster of >= cluster_size_limit
-        // sequences. See doc/bug_poa_random_subsample.md.
+        // sequences.
         std::vector<int> indices;
         std::mt19937 gen(poa_seed_);
         std::uniform_int_distribution<int> distribution(0, seqs.size() - 1);

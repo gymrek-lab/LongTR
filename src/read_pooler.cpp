@@ -25,7 +25,6 @@ int32_t ReadPooler::add_alignment(Alignment& aln){
   // 485 of 492 loci unchanged, worst locus +2.8%). Pooling still removes 45.5% of alignments, unchanged
   // to one decimal. The tail is real but narrow: at loci selected *because* they had cross-sample
   // alignment conflicts the growth reaches +2.3%, and the worst single locus observed was +9.9%.
-  // See doc/bug_read_pool_key_ignores_alignment.md.
   //
   // '|' separates the fields so the concatenation is unambiguous; it cannot occur in a sequence (ACGTN)
   // or in a CIGAR string (digits and MIDNSHP=X).

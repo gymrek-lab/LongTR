@@ -260,7 +260,7 @@ public:
   double ALN_WORK_MEDIAN;      // Reference median alignment work (M) for the work-factor skip guard. Default from a reference run.
   double SKIP_ALN_WORK_FACTOR; // Skip (and log) any locus whose predicted alignment work exceeds N*M (N = this). <=0 disables.
   uint32_t POA_SEED;           // Seed for the POA cluster-subsampling RNG. Fixed by default so runs are
-                               // bit-reproducible; see doc/bug_poa_random_subsample.md.
+                               // bit-reproducible.
   int POA_CLUSTER_LIMIT;       // Cluster size at/above which POA subsamples; POA cost vs consensus quality.
   double MAX_LOCUS_SEC;        // Wall-clock watchdog: per-locus genotyping budget (POA + alignment) in seconds; abort+skip over-budget loci. <=0 disables.
   int LOG_LOCUS_SIGNALS;      // If set, emit per-locus predictive signals (LOCUS_SIGNALS line + human-readable) for k calibration. Default off.

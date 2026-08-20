@@ -56,7 +56,7 @@ class HaplotypeGenerator {
 
   // Seed for the POA cluster subsampling in poa(), which previously used std::random_device and so
   // reseeded from system entropy on every call -- making genotypes differ between identical runs at
-  // any locus with a cluster of >= cluster_size_limit sequences (doc/bug_poa_random_subsample.md).
+  // any locus with a cluster of >= cluster_size_limit sequences.
   //
   // poa() constructs a generator from this seed on EVERY call rather than drawing from one long-lived
   // stream. That matters: a per-locus stream would make each cluster's subsample depend on how many

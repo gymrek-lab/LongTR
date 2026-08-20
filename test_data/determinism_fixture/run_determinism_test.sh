@@ -2,7 +2,7 @@
 # ============================================================================
 # LongTR CI determinism test — the same input must produce the same VCF.
 #
-# Guards against doc/bug_poa_random_subsample.md: HaplotypeGenerator::poa() subsamples large read
+# Guards against a POA subsampling regression: HaplotypeGenerator::poa() subsamples large read
 # clusters, and used a std::random_device-seeded RNG. Identical runs therefore produced different
 # candidate haplotypes, different ALT alleles and different genotypes — silently, at ~0.3% of loci.
 # The bug survived from 2024-02 to 2026-07 because nothing checked reproducibility.
@@ -92,7 +92,7 @@ fi
 if cmp -s "$OUT/sub_a.body" "$OUT/sub_c.body"; then
   echo "  FAIL 3/4  --seed 42 and --seed 7 agree -> the fixture no longer reaches the POA" >&2
   echo "            subsampling path, so assertions 1-2 prove nothing. Rebuild the fixture" >&2
-  echo "            (see doc/bug_poa_random_subsample.md) or lower --poa-cluster-limit." >&2
+  echo "            with a locus that exercises it, or lower --poa-cluster-limit." >&2
   fail=1
 else
   echo "  ok   3/4  different seeds -> differ (subsampling path is exercised)"
