@@ -81,6 +81,7 @@ class BamProcessor {
    use_bam_rgs_             = use_bam_rgs;
    REMOVE_PCR_DUPS          = (remove_pcr_dups ? 1 : 0);
    MAX_MATE_DIST            = 1000;
+   BGZF_CACHE_MB            = 0;
    MIN_BP_BEFORE_INDEL      = 7;
    MIN_FLANK                = 5;
    MIN_READ_END_MATCH       = 10;
@@ -155,6 +156,7 @@ class BamProcessor {
  static void passes_filters(BamAlignment& aln, std::vector<bool>& region_passes);
 
  int32_t MAX_MATE_DIST;
+ int32_t BGZF_CACHE_MB;         // Per-file decompressed-BGZF-block cache. 0 disables it (htslib's default)
  int32_t MIN_BP_BEFORE_INDEL;
  int32_t MIN_FLANK;
  int32_t MIN_READ_END_MATCH;

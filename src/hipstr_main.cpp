@@ -85,6 +85,25 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "Optional haplotype filtering parameters:" << "\n"
 	    << "\t" << "--max-haps <max_haplotypes>           "  << "\t" << "Maximum allowable candidate haplotypes for an TR (Default = " << def_max_haplotypes << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate haplotypes will not be genotyped" << "\n"
+	    << "\t" << "--aln-work-median <M>                 "  << "\t" << "Reference median alignment work M (pooled_read_bp x nhap x max_hap_len) from a" << "\n"
+	    << "\t" << "                                      "  << "\t" << " reference run; used with --skip-aln-work-factor (Default = 6.3e6)" << "\n"
+	    << "\t" << "--skip-aln-work-factor <N>            "  << "\t" << "Skip (and log a SKIP_LOCUS line for) any locus whose predicted alignment work" << "\n"
+	    << "\t" << "                                      "  << "\t" << " exceeds N times the median M, i.e. work > N*M. System-independent (Default = off)" << "\n"
+	    << "\t" << "--max-locus-sec <sec>                 "  << "\t" << "Wall-clock watchdog: abort+skip (SKIP_LOCUS reason=WATCHDOG_TIMEOUT) any locus" << "\n"
+	    << "\t" << "                                      "  << "\t" << " whose genotyping (POA + alignment) exceeds this many seconds (Default = off)" << "\n"
+	    << "\t" << "--seed <int>                          "  << "\t" << "Seed for the POA cluster-subsampling RNG. Runs with the same seed and input are" << "\n"
+	    << "\t" << "                                      "  << "\t" << " bit-reproducible; vary it to probe subsample sensitivity (Default = 42)" << "\n"
+	    << "\t" << "--poa-cluster-limit <int>             "  << "\t" << "Cluster size at/above which POA subsamples --seed-selected sequences instead of" << "\n"
+	    << "\t" << "                                      "  << "\t" << " using every one. Lower is faster but gives a coarser consensus (Default = 30)" << "\n"
+	    << "\t" << "--log-locus-signals                   "  << "\t" << "Emit a machine-parseable LOCUS_SIGNALS line per locus (nhap, read bp," << "\n"
+	    << "\t" << "                                      "  << "\t" << " max_hap_len, work, hap_build_sec, hap_aln_sec) for k calibration (Default = off)" << "\n"
+	    << "\t" << "--log-alt-alleles                   "  << "\t" << "Emit one ALT_ALLELE line per VCF ALT with its admission reason" << "\n"
+	    << "\t" << "                                      "  << "\t" << " (STRONG/AGGREGATE/VCF) + support and calling counts (Default = off)" << "\n"
+	    << "\t" << "--assemble-flanks                     "  << "\t" << "Assemble the sequences flanking each TR from the reads using a de Bruijn graph." << "\n"
+	    << "\t" << "                                      "  << "\t" << " This detects non-reference flanks and rejects loci whose flanks are too" << "\n"
+	    << "\t" << "                                      "  << "\t" << " repetitive to align reliably (Default = off, flanks are not assembled)" << "\n"
+	    << "\t" << "                                      "  << "\t" << " --skip-assembly is a deprecated alias for this option: despite its name it" << "\n"
+	    << "\t" << "                                      "  << "\t" << " turns flank assembly ON rather than off. Prefer --assemble-flanks" << "\n"
 	    << "\t" << "--max-hap-flanks <max_flanks>         "  << "\t" << "Maximum allowable non-reference flanking sequences for an TR (Default = " << def_max_flanks << ")" << "\n"
 	    << "\t" << "                                      "  << "\t" << " Loci with more candidate flanks will not be genotyped"                              << "\n"
 	    << "\t" << "--min-flank-freq <min_freq>           "  << "\t" << "Filter a flank if its fraction of supporting samples < MIN_FREQ (Default = " << def_min_flank_freq  << ")" << "\n" << "\n"
@@ -101,7 +120,10 @@ void print_usage(int def_mdist, int def_min_reads, int def_max_reads, int def_ma
 	    << "\t" << "--hap-chr-file       <hap_chroms.txt> "  << "\t" << "File containing chromosomes to treat as haploid, one per line"                        << "\n"
 	    << "\t" << "--min-reads          <num_reads>      "  << "\t" << "Minimum total reads required to genotype a locus (Default = " << def_min_reads << ")" << "\n"
 	    << "\t" << "--max-reads          <num_reads>      "  << "\t" << "Skip a locus if it has more than NUM_READS reads (Default = " << def_max_reads << ")" << "\n"
-	    << "\t" << "--max-tr-len         <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n" << std::endl;
+	    << "\t" << "--max-tr-len         <max_bp>         "  << "\t" << "Only genotype TRs in the provided BED file with length < MAX_BP (Default = " << def_max_str_len << ")" << "\n"
+	    << "\t" << "--bam-cache-mb       <mb>             "  << "\t" << "Cache MB of decompressed BGZF blocks per BAM file (Default = 0, disabled)." << "\n"
+	    << "\t" << "                                      "  << "\t" << " Nearby loci re-read almost the same blocks, so this avoids repeated decompression." << "\n"
+	    << "\t" << "                                      "  << "\t" << " Total memory is MB x (number of BAM files). Does not change output." << "\n" << std::endl;
     //<< "\t" << "--skip-genotyping                     "  << "\t" << "Don't perform any STR genotyping and merely compute the stutter model for each STR"  << "\n"
     //<< "\t" << "--dont-use-all-reads                  "  << "\t" << "Only utilize the reads HipSTR thinks will be informative for genotyping"   << "\n"
     //<< "\t" << "                                      "  << "\t" << " Enabling this option usually slightly decreases accuracy but shortens runtimes (~2x)"      << "\n"
@@ -137,6 +159,8 @@ void parse_command_line_args(int argc, char** argv,
     exit(0);
   }
 
+  // skip_assembly defaults to 1, i.e. flank assembly is off unless asked for. Both --assemble-flanks and its
+  // deprecated alias --skip-assembly clear it to 0, which is what turns flank assembly on.
   int print_help = 0, print_version = 0, quiet_log = 0, silent_log = 0, def_stutter_model = 1, phased_bam = 0, skip_assembly = 1, indel_flank_len = 5, switch_old_align_len = 0;
 
   static struct option long_options[] = {
@@ -190,10 +214,19 @@ void parse_command_line_args(int argc, char** argv,
     {"quiet",              no_argument, &quiet_log, 1},
     {"silent",             no_argument, &silent_log, 1},
     {"skip-genotyping",    no_argument, &skip_genotyping, 1},
-    {"skip-assembly",	   no_argument, &skip_assembly, 0},
+    {"assemble-flanks",    no_argument, &skip_assembly, 0},
+    {"skip-assembly",	   no_argument, &skip_assembly, 0}, // deprecated alias for --assemble-flanks: it turns assembly ON, not off
     {"stutter-align-len",    required_argument, 0, 'O'},
     {"indel-flank-len",    required_argument, 0, 'L'},
     {"alignment-params", required_argument, 0, 'P'},
+    {"aln-work-median", required_argument, 0, 1002},
+    {"skip-aln-work-factor", required_argument, 0, 1003},
+    {"max-locus-sec", required_argument, 0, 1004},
+    {"seed", required_argument, 0, 1005},
+    {"poa-cluster-limit", required_argument, 0, 1006},
+    {"bam-cache-mb", required_argument, 0, 1007},
+    {"log-locus-signals",  no_argument, &(bam_processor.LOG_LOCUS_SIGNALS), 1},
+    {"log-alt-alleles",  no_argument, &(bam_processor.LOG_ALT_ALLELES), 1},
     {0, 0, 0, 0}
   };
 
@@ -258,6 +291,28 @@ void parse_command_line_args(int argc, char** argv,
       bam_processor.MAX_TOTAL_HAPLOTYPES = atoi(optarg);
       if (bam_processor.MAX_TOTAL_HAPLOTYPES <= 1)
 	printErrorAndDie("--max-haps must be greater than 1");
+      break;
+    case 1002:
+      bam_processor.ALN_WORK_MEDIAN = atof(optarg);
+      break;
+    case 1003:
+      bam_processor.SKIP_ALN_WORK_FACTOR = atof(optarg);
+      break;
+    case 1004:
+      bam_processor.MAX_LOCUS_SEC = atof(optarg);
+      break;
+    case 1005:
+      bam_processor.POA_SEED = (uint32_t)strtoul(optarg, NULL, 10);
+      break;
+    case 1007:
+      bam_processor.BGZF_CACHE_MB = atoi(optarg);
+      if (bam_processor.BGZF_CACHE_MB < 0)
+        printErrorAndDie("--bam-cache-mb cannot be negative");
+      break;
+    case 1006:
+      bam_processor.POA_CLUSTER_LIMIT = atoi(optarg);
+      if (bam_processor.POA_CLUSTER_LIMIT < 2)
+        printErrorAndDie("--poa-cluster-limit must be at least 2");
       break;
     case 'l':
       log_file = std::string(optarg);
@@ -365,7 +420,7 @@ void parse_command_line_args(int argc, char** argv,
     bam_processor.use_phased_bam_tags();
     bam_processor.full_logger() << "Using phased BAM tags to genotype and phase TRs (WARNING: Any arguments provided to --snp-vcf will be ignored)" << std::endl;
   }
-  if (skip_assembly == 1){
+  if (skip_assembly == 1){ // neither --assemble-flanks nor --skip-assembly was given, so leave flank assembly off
     bam_processor.skip_assembly();
   }
 }	
@@ -456,7 +511,13 @@ int main(int argc, char** argv){
   // Open all BAM/CRAM files
   std::string cram_fasta_path = fasta_file;
   int merge_type = BamCramMultiReader::ORDER_ALNS_BY_FILE;
-  BamCramMultiReader reader(bam_files, cram_fasta_path, merge_type);
+  // The cache budget is per open file, so report the total -- it is what the node actually pays,
+  // and with per-file input (one reader per sample) it is N times what was asked for.
+  if (bam_processor.BGZF_CACHE_MB > 0)
+    bam_processor.full_logger() << "BGZF block cache: " << bam_processor.BGZF_CACHE_MB << " MB per file x "
+				<< bam_files.size() << " file(s) = "
+				<< (size_t)bam_processor.BGZF_CACHE_MB * bam_files.size() << " MB for this shard" << std::endl;
+  BamCramMultiReader reader(bam_files, cram_fasta_path, merge_type, true, bam_processor.BGZF_CACHE_MB);
 
   // Construct filename->read group map (if one has been specified) and determine the list
   // of samples of interest based on either the specified names or the RG tags in the BAM/CRAM headers

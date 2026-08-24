@@ -2,6 +2,7 @@
 #define HAP_ALIGNER_H_
 
 #include <assert.h>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -47,6 +48,11 @@ class HapAligner {
   int INDEL_FLANK_LEN;
   int SWITCH_OLD_ALIGN_LEN;
   AlignmentModel* AlnModel;
+
+  // Wall-clock watchdog: abort process_reads once past the per-locus deadline.
+  bool wd_enabled_ = false;
+  bool wd_aborted_ = false;
+  std::chrono::steady_clock::time_point wd_deadline_;
 
 
   void needleman_wunsch(const std::string& cent_seq, const std::string& read_seq, int& score) const;
@@ -136,6 +142,10 @@ class HapAligner {
 
   void process_reads(const std::vector<Alignment>& alignments, int init_read_index, const BaseQuality* base_quality, const std::vector<bool>& realign_read,
 		     double* aln_probs, int* seed_positions);
+
+  // Wall-clock watchdog hooks. set_deadline() shares the per-locus deadline; timed_out() reports abort.
+  void set_deadline(std::chrono::steady_clock::time_point deadline, bool enabled){ wd_deadline_ = deadline; wd_enabled_ = enabled; }
+  bool timed_out() const { return wd_aborted_; }
 
   /*
     Retraces the Alignment's optimal alignment to the provided haplotype.

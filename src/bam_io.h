@@ -481,7 +481,11 @@ private:
   void clear_cram_data_structures();
 
 public:
-  BamCramReader(const std::string& path, std::string fasta_path = "");
+  // bgzf_cache_mb > 0 enables htslib's decompressed-block cache for this file. Consecutive locus
+  // queries overlap heavily -- each backtracks to the earliest read that could overlap, so adjacent
+  // loci re-inflate nearly the same blocks -- and the cache turns those re-inflations into hits.
+  // Costs up to bgzf_cache_mb per open file. No effect on which records are returned.
+  BamCramReader(const std::string& path, std::string fasta_path = "", int bgzf_cache_mb = 0);
 
   const BamHeader* bam_header() const { return header_; }
   const std::string& path()     const { return path_;   }
@@ -534,14 +538,15 @@ class BamCramMultiReader {
   const static int ORDER_ALNS_BY_POSITION = 0;
   const static int ORDER_ALNS_BY_FILE     = 1;
 
-  BamCramMultiReader(const std::vector<std::string>& paths, std::string fasta_path = "", int merge_type = ORDER_ALNS_BY_POSITION, bool share_headers = true){
+  // bgzf_cache_mb is PER FILE, so the total is bgzf_cache_mb x paths.size().
+  BamCramMultiReader(const std::vector<std::string>& paths, std::string fasta_path = "", int merge_type = ORDER_ALNS_BY_POSITION, bool share_headers = true, int bgzf_cache_mb = 0){
     if (paths.empty())
       printErrorAndDie("Must provide at least one file to BamCramMultiReader constructor");
     if (merge_type != ORDER_ALNS_BY_POSITION && merge_type != ORDER_ALNS_BY_FILE)
       printErrorAndDie("Invalid merge type provided to BamCramMultiReader constructor");
     for (size_t i = 0; i < paths.size(); i++){
       cached_alns_.push_back(BamAlignment());
-      bam_readers_.push_back(new BamCramReader(paths[i], fasta_path));
+      bam_readers_.push_back(new BamCramReader(paths[i], fasta_path, bgzf_cache_mb));
       if (i == 0)
 	multi_header_ = new BamMultiHeader(bam_readers_[i]->bam_header(), paths[i]);
       else {

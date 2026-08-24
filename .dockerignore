@@ -1,0 +1,21 @@
+# Keep the build context small and force a clean build inside the container.
+
+# Vendored deps are cloned fresh by the Makefile inside the image.
+lib/htslib
+lib/spoa
+
+# Stale object/dependency files (must be recompiled with the Alpine toolchain).
+**/*.o
+**/*.d
+
+# Prebuilt binaries and release artifacts.
+/LongTR
+/DenovoFinder
+dist
+*.tar.gz
+
+# VCS history and editor/CI cruft not needed to build.
+.git
+.github
+.vscode
+*.log

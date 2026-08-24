@@ -238,18 +238,28 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   left_prob = 0.0;
   std::string read_seq = seq_0;
-  if (haplotype->get_seq().size() <= 60){ //TODO, it usually happens in case of big deletions
+  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
+  const int trim = std::max(0, REF_FLANK_LEN - INDEL_FLANK_LEN); // clamped: a negative count wraps in substr's unsigned pos
+  if (haplotype->get_seq().size() <= (size_t)(2*trim)){ //TODO, it usually happens in case of big deletions
     left_prob = IMPOSSIBLE;
     return;
   }
-  const int REF_FLANK_LEN = 35; //from HaplotypeGenerator.h
-  std::string haplotype_seq = haplotype->get_seq().substr(REF_FLANK_LEN - INDEL_FLANK_LEN, haplotype->get_seq().size() - (REF_FLANK_LEN - INDEL_FLANK_LEN)*2);
+  std::string haplotype_seq = haplotype->get_seq().substr(trim, haplotype->get_seq().size() - 2*trim);
   int n = haplotype_seq.size();
   int m = read_seq.size();
    if (abs(n - m) > 600){
     left_prob = -700;
     return;
    }
+
+  // Skip loci whose DP matrix would not fit in an int: n and m are ints, so n*m (the new[] size just
+  // below, and the largest index i*m+j == n*m-1) overflows once n*m > INT_MAX, giving a negative length
+  // (std::bad_array_new_length, cf. upstream issue #15) or wrapped, out-of-bounds indices. The (long long)
+  // cast forces a 64-bit comparison so the guard itself cannot overflow.
+  if ((long long)n * m > INT_MAX){
+    left_prob = -700;
+    return;
+  }
 
   double* deletion_matrix = new double [n*m];
   double* match_matrix = new double [n*m];
@@ -265,7 +275,12 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
   match_matrix[0] = (haplotype_seq[0] == read_seq[0] ? MATCH : MISMATCH);
 
   for (int i = 1; i < m; ++i){
-    match_matrix[i] = deletion_matrix[i-1] + AlnModel->LOG_DEL_TO_MATCH + (haplotype_seq[i] == read_seq[0] ? MATCH : MISMATCH);
+    // First row = haplotype row 0, read column i. Per the interior convention
+    // haplotype_seq[row] == read_seq[col] (line 285), the emission must compare haplotype_seq[0] vs
+    // read_seq[i]. The previous haplotype_seq[i] == read_seq[0] was transposed: it mis-scored the
+    // boundary AND read haplotype_seq out of bounds whenever the read was longer than the haplotype
+    // (m > n). read_seq[i] (i < m) is always in range, so this also removes the heap-buffer-overflow.
+    match_matrix[i] = deletion_matrix[i-1] + AlnModel->LOG_DEL_TO_MATCH + (haplotype_seq[0] == read_seq[i] ? MATCH : MISMATCH);
     insertion_matrix[i] = IMPOSSIBLE;
     deletion_matrix[i] = AlnModel->LOG_MATCH_TO_DEL + left_prob; // First row
     left_prob += AlnModel->LOG_DEL_TO_DEL;
@@ -273,7 +288,9 @@ void HapAligner::align_seq_to_hap(Haplotype* haplotype, bool reuse_alns,
 
   left_prob = 0.0;
   for (int i = 1; i < n; ++i){
-    match_matrix[i * m] = insertion_matrix[(i-1)*m] + AlnModel->LOG_INS_TO_MATCH + (haplotype_seq[0] == read_seq[1] ? MATCH : MISMATCH);;
+    // First column = haplotype row i, read column 0. Emission must compare haplotype_seq[i] vs
+    // read_seq[0] (was transposed to haplotype_seq[0] == read_seq[1]).
+    match_matrix[i * m] = insertion_matrix[(i-1)*m] + AlnModel->LOG_INS_TO_MATCH + (haplotype_seq[i] == read_seq[0] ? MATCH : MISMATCH);
     insertion_matrix[i * m] = MATCH + AlnModel->LOG_MATCH_TO_INS + left_prob;
     deletion_matrix[i * m] = IMPOSSIBLE; // First column
     left_prob += AlnModel->LOG_INS_TO_INS;
@@ -554,6 +571,11 @@ void HapAligner::process_reads(const std::vector<Alignment>& alignments, int ini
     short_ = 1;
     }
   for (unsigned int i = 0; i < alignments.size(); i++){
+    // Wall-clock watchdog: bail out of the alignment loop once past the per-locus deadline.
+    if (wd_enabled_ && std::chrono::steady_clock::now() > wd_deadline_){
+      wd_aborted_ = true;
+      break;
+    }
     if (!realign_read[i]){
       prob_ptr += fw_haplotype_->num_combs();
       continue;

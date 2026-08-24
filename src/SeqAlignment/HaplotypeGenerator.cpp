@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <sstream>
 
 #include "spoa/spoa.hpp"
 #include "HaplotypeGenerator.h"
@@ -168,10 +169,11 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
     std::unique_ptr<spoa::AlignmentEngine> alignment_engine;
     alignment_engine =spoa::AlignmentEngine::Create(static_cast<spoa::AlignmentType>(1),(std::int8_t) 1, (std::int8_t) -1,(std::int8_t) -1);
     spoa::Graph graph{};
-    int cluster_size_limit = 30;
+    const int cluster_size_limit = poa_cluster_limit_;
     //std::cout << "total " << seqs.size() << std::endl;
     if (seqs.size() < cluster_size_limit){
         for (const auto& seq: seqs) {
+            if (wd_expired()) return; // wall-clock watchdog
             auto alignment = alignment_engine->Align(seq, graph);
             graph.AddAlignment(alignment, seq);
 
@@ -179,9 +181,14 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
         consensus = graph.GenerateConsensus();
     }
     else{
+        // Subsample cluster_size_limit sequences. The generator is seeded from poa_seed_ (settable via
+        // set_seed()/--seed, default DEFAULT_POA_SEED) on every call. It previously used
+        // std::random_device, reseeding from system entropy each time, which made the POA consensus --
+        // and therefore the candidate haplotypes, the admitted ALT alleles and the genotype calls --
+        // differ between identical runs at every locus with a cluster of >= cluster_size_limit
+        // sequences.
         std::vector<int> indices;
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        std::mt19937 gen(poa_seed_);
         std::uniform_int_distribution<int> distribution(0, seqs.size() - 1);
         while(indices.size() < cluster_size_limit){
             int randomInt = distribution(gen);
@@ -191,6 +198,7 @@ void HaplotypeGenerator::poa(const std::vector<std::string>& seqs, std::string& 
             }
         }
         for (const auto& index: indices) {
+            if (wd_expired()) return; // wall-clock watchdog
             auto alignment = alignment_engine->Align(seqs[index], graph);
             graph.AddAlignment(alignment, seqs[index]);
         }
@@ -239,6 +247,7 @@ bool HaplotypeGenerator::greedy_clustering(const std::vector<std::string>& seqs,
   centroids.push_back(seqs[0]); // first centroid is the first sequence
   clusters[seqs[0]].push_back(seqs[0]);;
   for (int i = 1; i < seqs.size(); i++) {
+    if (wd_expired()) return false; // wall-clock watchdog
     int min_score = INT_MAX;
     int min_cntr = -1;
     for (int j = 0; j < centroids.size(); j++) {
@@ -272,6 +281,7 @@ bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_cent
     bool updated = false;
     //std::cout << "mergingggg" << std::endl;
     for (int i = 0; i < new_centroids.size(); i++){
+        if (wd_expired()) return updated; // wall-clock watchdog
         //int T = std::min(static_cast<int>(0.1 * new_centroids[i].size()), threshold); // TODO make it constant
         int T = threshold;
         for (int j = 1; j < new_centroids.size(); j++){
@@ -294,11 +304,18 @@ bool HaplotypeGenerator::merge_clusters(const std::vector<std::string>& new_cent
 
 void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int ideal_min_length,
 					    const std::vector< std::vector<Alignment> >& alignments, const std::vector<std::string>& vcf_alleles,
-					    int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences) const {
+					    int32_t& region_start, int32_t& region_end, std::vector<std::pair<std::string, bool>>& sequences,
+					    bool log_alt, std::map<std::string, std::string>* admission_out) const {
   assert(sequences.empty());
   std::map<std::string, double> sample_counts;
   std::map<std::string, int> read_counts, must_inc;
   int tot_reads = 0, tot_samples = 0;
+
+
+  // (--log-alt-alleles) admission tags keyed by the PRE-trim candidate sequence. trim() below clips
+  // shared flanks in place (preserving order), so we remap these onto the post-trim sequences afterward
+  // and write them into admission_out, whose keys then match the stored HapBlock sequences read at VCF time.
+  std::map<std::string, std::string> admit_by_pretrim;
 
   // Determine the number of reads and number of samples supporting each allele
   for (unsigned int i = 0; i < alignments.size(); i++){
@@ -330,6 +347,19 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   int ref_index = -1;
   for (unsigned int i = 0; i < vcf_alleles.size(); i++){
     sequences.push_back(std::pair<std::string,bool>(vcf_alleles[i],false));
+    if (log_alt && admission_out != NULL && vcf_alleles[i] != ref_seq){
+      auto sc = sample_counts.find(vcf_alleles[i]);
+      auto rc = read_counts.find(vcf_alleles[i]);
+      auto mi = must_inc.find(vcf_alleles[i]);
+      std::ostringstream tag;
+      tag << "\treason=VCF"
+          << "\tread_count="   << (rc != read_counts.end()   ? rc->second : 0)
+          << "\tsample_count=" << (sc != sample_counts.end()  ? sc->second : 0.0)
+          << "\tmust_inc="     << (mi != must_inc.end()       ? mi->second : 0)
+          << "\ttot_reads="    << tot_reads
+          << "\ttot_samples="  << tot_samples;
+      admit_by_pretrim[vcf_alleles[i]] = tag.str();
+    }
     auto iter_1 = sample_counts.find(vcf_alleles[i]);
     if (iter_1 != sample_counts.end()){
       sample_counts.erase(iter_1);
@@ -347,6 +377,16 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
     if (iter->second >= MIN_STRONG_SAMPLES){
       auto iter_1 = sample_counts.find(iter->first);
       auto iter_2 = read_counts.find(iter->first);
+      if (log_alt && admission_out != NULL){
+        std::ostringstream tag;
+        tag << "\treason=STRONG"
+            << "\tread_count="   << iter_2->second
+            << "\tsample_count=" << iter_1->second
+            << "\tmust_inc="     << iter->second
+            << "\ttot_reads="    << tot_reads
+            << "\ttot_samples="  << tot_samples;
+        admit_by_pretrim[iter->first] = tag.str();
+      }
       sample_counts.erase(iter_1);
       read_counts.erase(iter_2);
       sequences.push_back(std::pair<std::string,bool>(iter->first,false));
@@ -358,6 +398,16 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
   // Identify additional alleles satisfying thresholds
   for (auto iter = sample_counts.begin(); iter != sample_counts.end(); iter++){
     if (iter->second > MIN_FRAC_SAMPLES*tot_samples*2 || read_counts[iter->first] > MIN_FRAC_READS*tot_reads*2){
+      if (log_alt && admission_out != NULL){
+        std::ostringstream tag;
+        tag << "\treason=AGGREGATE"
+            << "\tread_count="   << read_counts[iter->first]
+            << "\tsample_count=" << iter->second
+            << "\tmust_inc=0"
+            << "\ttot_reads="    << tot_reads
+            << "\ttot_samples="  << tot_samples;
+        admit_by_pretrim[iter->first] = tag.str();
+      }
       sequences.push_back(std::pair<std::string,bool>(iter->first,false));
       if (ref_index == -1 && (iter->first.compare(ref_seq) == 0))
 	ref_index = sequences.size()-1;
@@ -372,6 +422,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
     sequences[0]         = std::pair<std::string,bool>(ref_seq,false);
   }
   //for (auto seq:sequences) std::cout << seq.first.size() << std::endl;
+
 
   // Identify how many alignments don't have a candidate haplotype:
   std::vector<std::pair<std::map<std::string, int>, int>> not_added_all_samples; //automatically initialized to zero
@@ -395,6 +446,19 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
     }
 
   if (not_added_all_samples.size() > 0) { //There is at least one sample with ignored reads
+    // Cohort-level bookkeeping for the POA rescue path.
+    //
+    // Admission is still decided per sample below (same 10% cluster bar, same 80% coverage gate), but
+    // the proposals are gathered first and committed once, afterwards. Previously each sample pushed
+    // straight into `sequences` and skipped any consensus an *earlier* sample had already claimed, so
+    // the reported read_count belonged to whichever sample happened to be iterated first and
+    // sample_count was hardcoded to 0 -- both meaningless for an allele several samples support, and
+    // both dependent on sample ordering. The admitted set is unchanged by this; only the reported
+    // evidence and the commit order are.
+    std::map<std::string, int> poa_reads;    // consensus -> reads supporting it, summed over proposing samples
+    std::map<std::string, int> poa_samples;  // consensus -> number of samples proposing it
+    std::vector<std::string>   poa_committed;// consensuses from samples that cleared their coverage gate
+
     for (auto not_added_total_pair:not_added_all_samples){
         std::vector<std::string> uniqueStrings;
         for (auto pair : not_added_total_pair.first) {
@@ -406,9 +470,11 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
         bool finished = false;
         for (auto t:thresholds){
             //std::cout << t << std::endl;
+            if (wd_expired()) return; // wall-clock watchdog
             if (finished == true) break;
             std::map<std::string, std::vector<std::string>> clusters;
             bool clusters_done = greedy_clustering(uniqueStrings, clusters, t);
+            if (wd_expired()) return; // greedy_clustering may have hit the deadline (returns false on timeout)
             if (clusters_done == false) continue;
 
 //            for  (auto c: clusters){
@@ -420,6 +486,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
             // sequences to partial order alignment of strings in each cluster
             // continue until convergence
             while (not_converged) {
+                 if (wd_expired()) return; // wall-clock watchdog
                  std::map<std::string, std::vector<std::string>> updated_clusters;
                  std::vector<std::string> new_centroids;
                  for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
@@ -444,7 +511,7 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
 //            }
              // Add centroids of refined clusters to haplotype sequences
              int new_seqs_added = 0;
-             std::vector<std::pair<std::string, bool>> potential_seqs;
+             std::vector<std::string> proposed; // this sample's qualifying centroids
              for (auto iter = clusters.begin(); iter != clusters.end(); iter++) {
                 int sum_per_cluster = 0;
                 for (auto seq: iter->second){
@@ -454,31 +521,67 @@ void HaplotypeGenerator::gen_candidate_seqs(const std::string& ref_seq, int idea
                //std::cout << sum_per_cluster << " tot " << not_added_total_pair.second << std::endl;
                 if (sum_per_cluster > std::min((int)(not_added_total_pair.second*0.10), 10)) { // only include clusters that have considerable reads.
                     new_seqs_added += sum_per_cluster;
-                    if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,false)) == sequences.end() &
-                    std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(iter->first,true)) == sequences.end()){ // if the centeroid is not already in the candidate haplotypes
-                        potential_seqs.push_back(std::pair<std::string,bool>(iter->first,true));
-                    }
+                    // Tally cohort support for every sample that proposes this consensus, whether or
+                    // not this sample goes on to clear its coverage gate -- that is the evidence a
+                    // reader of --log-alt-alleles wants, and it does not depend on sample order.
+                    poa_reads[iter->first]   += sum_per_cluster;
+                    poa_samples[iter->first] += 1;
+                    proposed.push_back(iter->first);
              }
            }
            if (new_seqs_added >= (int)(0.80*not_added_total_pair.second)){ // does current clusters cover considerable portion of ignored reads?
             //std::cout << "enough samples are covered" << new_seqs_added << "\t" << not_added_total_pair.second << std::endl;;
-            for (auto pair:potential_seqs){
-                sequences.push_back(pair);
-            }
+            poa_committed.insert(poa_committed.end(), proposed.begin(), proposed.end());
             finished = true;
            }
        }
     }
+
+    // Commit the union of every committing sample's proposals, in a canonical order and with
+    // cohort-level counts. Deduplicating here is what the per-sample `std::find` against `sequences`
+    // used to do, minus the dependence on which sample got there first.
+    std::sort(poa_committed.begin(), poa_committed.end(), orderByLengthAndSequence);
+    poa_committed.erase(std::unique(poa_committed.begin(), poa_committed.end()), poa_committed.end());
+    for (auto seq_iter = poa_committed.begin(); seq_iter != poa_committed.end(); seq_iter++){
+      const std::string& consensus = *seq_iter;
+      if (std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(consensus,false)) != sequences.end() ||
+          std::find(sequences.begin(), sequences.end(), std::pair<std::string,bool>(consensus,true))  != sequences.end())
+        continue; // already a candidate haplotype from the VCF/STRONG/AGGREGATE passes
+      sequences.push_back(std::pair<std::string,bool>(consensus,true));
+      if (log_alt && admission_out != NULL){
+        std::ostringstream tag;
+        tag << "\treason=INEXACT_POA\tread_count=" << poa_reads[consensus]
+            << "\tsample_count=" << poa_samples[consensus] << "\tmust_inc=0"
+            << "\ttot_reads=" << tot_reads << "\ttot_samples=" << tot_samples;
+        admit_by_pretrim[consensus] = tag.str();
+      }
+    }
   }
+
 
   //Sort regions by length and then by sequence (apart from reference sequence)
   std::sort(sequences.begin()+1, sequences.end(), orderByLengthAndSequencePair);
 
   //for (auto seq:sequences) std::cout << seq.first.size() << std::endl;
 
+  // (--log-alt-alleles) snapshot pre-trim sequences by position so we can remap admission tags after
+  // trim() rewrites the sequence strings in place (order and count are preserved by trim).
+  std::vector<std::string> pretrim_seqs;
+  if (log_alt && admission_out != NULL)
+    for (unsigned int i = 0; i < sequences.size(); i++)
+      pretrim_seqs.push_back(sequences[i].first);
+
   // Clip identical regions
   trim(ideal_min_length, region_start, region_end, sequences);
 
+  // Remap admission tags from pre-trim -> post-trim sequences, keying admission_out by the post-trim
+  // sequence (== what the HapBlock stores and write_vcf_record looks up via block->get_seq()).
+  if (log_alt && admission_out != NULL)
+    for (unsigned int i = 0; i < sequences.size() && i < pretrim_seqs.size(); i++){
+      auto it = admit_by_pretrim.find(pretrim_seqs[i]);
+      if (it != admit_by_pretrim.end())
+        (*admission_out)[sequences[i].first] = it->second;
+    }
 }
 
 void HaplotypeGenerator::get_aln_bounds(const std::vector< std::vector<Alignment> >& alignments,
@@ -525,7 +628,8 @@ bool HaplotypeGenerator::add_vcf_haplotype_block(int32_t pos, const std::string&
 }
 
 bool HaplotypeGenerator::add_haplotype_block(const Region& region, const std::string& chrom_seq, const std::vector< std::vector<Alignment> >& alignments,
-					     const std::vector<std::string>& vcf_alleles, const StutterModel* stutter_model){
+					     const std::vector<std::string>& vcf_alleles, const StutterModel* stutter_model,
+					     bool log_alt, std::map<std::string, std::string>* admission_out){
   if (!failure_msg_.empty())
     printErrorAndDie("Unable to add a haplotype block, as a previous addition failed");
 
@@ -561,7 +665,8 @@ bool HaplotypeGenerator::add_haplotype_block(const Region& region, const std::st
   // Extract candidate STR sequences (using some padding to ensure indels near STR ends are included)
   std::vector<std::pair<std::string, bool>> sequences;
   int ideal_min_length = 3*region.period(); // Would ideally have at least 3 repeat units in each allele after trimming
-  gen_candidate_seqs(ref_seq, ideal_min_length, alignments, padded_vcf_alleles, region_start, region_end, sequences);
+  gen_candidate_seqs(ref_seq, ideal_min_length, alignments, padded_vcf_alleles, region_start, region_end, sequences, log_alt, admission_out);
+  if (timed_out()){ failure_msg_ = "Watchdog timeout during candidate haplotype generation (POA)"; return false; } //
 
   // Ensure that the new haplotype block won't overlap with previous blocks
   if (!hap_blocks_.empty() && (region_start < hap_blocks_.back()->end() + MIN_BLOCK_SPACING)){

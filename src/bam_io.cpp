@@ -63,7 +63,7 @@ void BamHeader::parse_read_groups(const char *text){
   }
 }
 
-BamCramReader::BamCramReader(const std::string& path, std::string fasta_path)
+BamCramReader::BamCramReader(const std::string& path, std::string fasta_path, int bgzf_cache_mb)
   : path_(path), chrom_(""){
 
   // Open the file itself
@@ -72,6 +72,13 @@ BamCramReader::BamCramReader(const std::string& path, std::string fasta_path)
   in_ = sam_open(path.c_str(), "r");
   if (in_ == NULL)
     printErrorAndDie("Failed to open file " + path);
+
+  // Enable htslib's decompressed-block cache before the first read: it is a property of the BGZF
+  // handle. Only meaningful for BGZF -- in_->fp is a union, so calling this on a CRAM would hand
+  // bgzf_set_cache_size() a cram_fd*. Purely a memoisation of inflate; the records returned, and
+  // their order, are unchanged.
+  if (bgzf_cache_mb > 0 && in_->format.compression == bgzf)
+    bgzf_set_cache_size(in_->fp.bgzf, bgzf_cache_mb * 1024 * 1024);
 
   if (in_->is_cram){
     if (fasta_path.empty())

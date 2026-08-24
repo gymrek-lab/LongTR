@@ -148,9 +148,18 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
 
   std::vector<BamAlnList> alignments(paired_strs_by_rg.size());
   std::vector< std::vector<double> > log_p1s, log_p2s;
-  int32_t phased_reads = 0, total_reads = 0, haplotype_1_reads = 0, haplotype_2_reads = 0;
-  bool not_enough_phased_reads = false;
+  // Cohort-wide tallies, used only for the summary log line at the end of the function
+  int32_t phased_reads = 0, total_reads = 0;
   for (unsigned int i = 0; i < paired_strs_by_rg.size(); i++){
+    // Per-sample counters backing the phasing gate below. These must restart at zero for every
+    // read group: they used to be declared outside this loop and never reset, so the gate for
+    // sample i was evaluated on reads pooled over samples 0..i and, once not_enough_phased_reads
+    // was set, it was never cleared -- every later sample silently lost its phasing regardless of
+    // its own read support. That made the result depend on sample iteration order and on which
+    // other samples were in the cohort.
+    int32_t sample_reads = 0, haplotype_1_reads = 0, haplotype_2_reads = 0;
+    bool not_enough_phased_reads = false;
+
     // Copy alignments
     alignments[i].insert(alignments[i].end(), paired_strs_by_rg[i].begin(),   paired_strs_by_rg[i].end());
     alignments[i].insert(alignments[i].end(), unpaired_strs_by_rg[i].begin(), unpaired_strs_by_rg[i].end());
@@ -159,7 +168,7 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
     log_p2s.push_back(std::vector<double>());
 
     for (unsigned int j = 0; j < paired_strs_by_rg[i].size(); j++){
-      total_reads++;
+      total_reads++; sample_reads++;
       int haplotype_1 = get_haplotype(paired_strs_by_rg[i][j]);
       int haplotype_2 = get_haplotype(mate_pairs_by_rg[i][j]);
       int haplotype;
@@ -174,7 +183,7 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
     }
 
     for (unsigned int j = 0; j < unpaired_strs_by_rg[i].size(); j++){
-      total_reads++;
+      total_reads++; sample_reads++;
       int haplotype = get_haplotype(unpaired_strs_by_rg[i][j]);
       if (haplotype != -1){
 	    if (haplotype == 1) haplotype_1_reads++;
@@ -184,7 +193,11 @@ void SNPBamProcessor::process_phased_reads(std::vector<BamAlnList>& paired_strs_
     // check if we have enough reads from each haplotype
     //double haplotype_1_frac = ((double)haplotype_1_reads / (double)total_reads);
     //double haplotype_2_frac = ((double)haplotype_2_reads / (double)total_reads);
-    double unphased_frac = (double)(total_reads - (haplotype_1_reads + haplotype_2_reads)) / (double)total_reads;
+    // A sample with no reads at this locus has nothing to phase; treat it as fully unphased
+    // rather than evaluating 0/0 (the NaN would make this comparison false and leave the
+    // decision to the haplotype_*_reads clauses by accident).
+    double unphased_frac = (sample_reads == 0 ? 1.0
+                            : (double)(sample_reads - (haplotype_1_reads + haplotype_2_reads)) / (double)sample_reads);
 
     //std::cout << haplotype_1_reads << " " << rg_names[i] << " " << haplotype_2_reads << " " << std::endl;
     if (unphased_frac > 0.2 || haplotype_2_reads <= 1 || haplotype_1_reads <= 1){

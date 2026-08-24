@@ -1,0 +1,47 @@
+name: Release
+
+# Cut a release with a portable static binary when a version tag is pushed, e.g.:
+#     git tag v1.2.0 && git push origin v1.2.0
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build portable binary and publish release
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDKIT: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Embed version
+        run: make version
+
+      - name: Build portable static tarball
+        run: |
+          docker build \
+            --build-arg VERSION="${{ steps.ver.outputs.version }}" \
+            --target artifact --output type=local,dest=./dist .
+
+      - name: Verify static + smoke test
+        run: |
+          file ./dist/LongTR
+          ./dist/LongTR --help
+          ls -l dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tar.gz
+          generate_release_notes: true

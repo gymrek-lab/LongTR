@@ -77,7 +77,7 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 				for(read_index = min_read_index; read_index < num_reads_; read_index++){
 					if (sample_label_[read_index] != sample_index)
 						break;
-					if (traced_alns[read_index] == NULL)
+					if (traced_alns.empty() || traced_alns[read_index] == NULL)
 						continue;
 					std::string seq = ""; // read flank sequence extraction is not working now.
 					if(seq.empty()) continue;
@@ -102,7 +102,7 @@ bool SeqStutterGenotyper::assemble_flanks(int max_total_haplotypes, int max_flan
 					for (read_index = min_read_index; read_index < num_reads_; read_index++){
 						if (sample_label_[read_index] != sample_index)
 							break;
-						if (traced_alns[read_index] == NULL)
+						if (traced_alns.empty() || traced_alns[read_index] == NULL)
 							continue;
 
 						std::string seq = traced_alns[read_index]->flank_seq(block_index);
@@ -426,6 +426,9 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 	}
 
 	HaplotypeGenerator hap_generator(min_aln_start, max_aln_stop, INDEL_FLANK_LEN);
+	hap_generator.set_seed(poa_seed_);                              // deterministic POA subsampling
+	hap_generator.set_poa_cluster_limit(poa_cluster_limit_);
+	hap_generator.set_deadline(locus_deadline_, watchdog_enabled_); // wall-clock watchdog covers POA
 	const std::vector<Region>& regions = region_group_->regions();
 	bool success = true;
 	for (int region_index = 0; region_index < regions.size(); region_index++){
@@ -453,7 +456,7 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 		}
 		else {
 			// Add the haplotype block in which alleles are derived from the alignments
-			if (!hap_generator.add_haplotype_block(regions[region_index], chrom_seq, gen_hap_alns, vcf_alleles, stutter_models[region_index])){
+			if (!hap_generator.add_haplotype_block(regions[region_index], chrom_seq, gen_hap_alns, vcf_alleles, stutter_models[region_index], log_alt_alleles_, &allele_admission_)){
 				logger << "Haplotype construction failed: " << hap_generator.failure_msg() << std::endl;
 				success = false;
 				break;
@@ -478,6 +481,7 @@ bool SeqStutterGenotyper::build_haplotype(const std::string& chrom_seq, std::vec
 
 	locus_hap_build_time   = (clock() - locus_hap_build_time)/CLOCKS_PER_SEC;
 	total_hap_build_time_ += locus_hap_build_time;
+	if (hap_generator.timed_out()){ watchdog_aborted_ = true; watchdog_phase_ = "POA"; } // wall-clock watchdog
 	return success;
 }
 
@@ -505,6 +509,30 @@ void SeqStutterGenotyper::init(std::vector<StutterModel*>& stutter_models, const
 	}
 }
 
+void SeqStutterGenotyper::record_predictive_signals(){
+	// Signals that feed the runtime-guard work model. Captured once, just before the
+	// initial haplotype-alignment pass, so they describe the *initial* alignment cost (independent
+	// of later growth from flank reassembly). Used both for calibration logging (item 1) and,
+	// later, the predictive guard itself (item 2), so the work definition lives in one place.
+	initial_num_alleles_   = num_alleles_;               // == haplotype_->num_combs() at this point
+	initial_max_hap_size_  = haplotype_->max_size();     // upper bound on a single haplotype's length
+	AlnList& pooled_alns   = pooler_.get_alignments();
+	num_aligned_pools_     = pooled_alns.size();          // == pooler_.num_pools()
+	total_pooled_read_len_ = 0;
+	for (unsigned int i = 0; i < pooled_alns.size(); i++)
+		total_pooled_read_len_ += pooled_alns[i].get_sequence().size();
+
+	// Raw (pre-pool, pre-POA) input-read bp — a predictor of POA/haplotype-generation cost, which runs
+	// in the ctor before this point. Logged alongside hap_build_sec so POA cost can be calibrated later.
+	total_read_bp_ = 0;
+	for (unsigned int i = 0; i < alns_.size(); i++)
+		total_read_bp_ += alns_[i].get_sequence().size();
+
+	// work ≈ (Σ pooled read_len) × (num_combs × max_hap_len) = total DP cells across the initial
+	// alignment pass. predicted_sec = k · work, with k (seconds/cell) calibrated from LOCUS_SIGNALS.
+	predicted_aln_work_ = (double) total_pooled_read_len_ * (double) initial_num_alleles_ * (double) initial_max_hap_size_;
+}
+
 void SeqStutterGenotyper::calc_hap_aln_probs(std::vector<bool>& realign_to_haplotype){
 	std::vector<bool> realign_pool = std::vector<bool>(pooler_.num_pools(), true);
 	std::vector<bool> copy_read    = std::vector<bool>(num_reads_, true);
@@ -515,12 +543,14 @@ void SeqStutterGenotyper::calc_hap_aln_probs(std::vector<bool>& realign_to_haplo
 	double locus_hap_aln_time = clock();
 	assert(haplotype_->num_combs() == realign_to_haplotype.size() && haplotype_->num_combs() == num_alleles_);
 	HapAligner hap_aligner(haplotype_, realign_to_haplotype, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters);
+	hap_aligner.set_deadline(locus_deadline_, watchdog_enabled_); // wall-clock watchdog covers alignment
 
 	// Align each pooled read to each haplotype
 	AlnList& pooled_alns       = pooler_.get_alignments();
 	double* log_pool_aln_probs = new double[pooled_alns.size()*num_alleles_];
 	int* pool_seed_positions   = new int[pooled_alns.size()];
 	hap_aligner.process_reads(pooled_alns, 0, &base_quality_, realign_pool, log_pool_aln_probs, pool_seed_positions);
+	if (hap_aligner.timed_out()){ watchdog_aborted_ = true; watchdog_phase_ = "ALIGN"; } // wall-clock watchdog
 
 	// Copy each pool's alignment probabilities to the entries for its constituent reads, but only for realigned haplotypes
 	double* log_aln_ptr = log_aln_probs_;
@@ -596,7 +626,35 @@ bool SeqStutterGenotyper::id_and_align_to_stutter_alleles(int max_total_haplotyp
 }
 
 
-bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplotypes, double min_flank_freq, std::ostream& logger){
+void SeqStutterGenotyper::log_watchdog_skip(std::ostream& logger){
+	// Structured skip line for a locus aborted by the wall-clock watchdog. elapsed uses the same
+	// monotonic clock as the deadline (captured at ctor entry, i.e. genotyping start). nhap/work are only
+	// available if the ALIGN phase was reached (record_predictive_signals ran); omitted for POA-phase aborts.
+	double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - locus_start_).count();
+	logger << "SKIP_LOCUS"
+	       << "\treason=WATCHDOG_TIMEOUT"
+	       << "\tphase="       << watchdog_phase_
+	       << "\tregion="      << region_group_->chrom() << ":" << region_group_->start() << "-" << region_group_->stop()
+	       << "\tbed_len="     << (region_group_->stop() - region_group_->start())
+	       << "\telapsed_sec=" << elapsed
+	       << "\tbudget_sec="  << locus_budget_sec_;
+	if (initial_num_alleles_ >= 0)
+		logger << "\tnhap="          << initial_num_alleles_
+		       << "\twork="          << predicted_aln_work_
+		       << "\tpools="         << num_aligned_pools_
+		       << "\treads="         << num_reads_
+		       << "\tmax_hap_len="   << initial_max_hap_size_
+		       << "\tpooled_read_bp="<< total_pooled_read_len_;
+	logger << std::endl;
+}
+
+bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplotypes, double min_flank_freq, double aln_work_median, double skip_aln_work_factor, std::ostream& logger){
+	// Wall-clock watchdog: POA runs in the ctor, so a POA-phase timeout is already flagged here.
+	if (watchdog_aborted_){
+		log_watchdog_skip(logger);
+		return false;
+	}
+
 	// Unsuccessful initialization. May be due to
 	// 1) Failing to find the corresponding alleles in the VCF (if one has been provided)
 	// 2) Large deletion extending past STR
@@ -627,11 +685,45 @@ bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplo
 	//init_alignment_model();
 	pooler_.pool(base_quality_);
 
+	// Snapshot the predictive alignment-cost signals for the runtime guard / calibration logging.
+	// Placed here (after pooling, before the first alignment) = the exact guard insertion point.
+	record_predictive_signals();
+
+	// Runtime skip guard (system-independent form): skip a locus whose predicted alignment work exceeds
+	// --skip-aln-work-factor (N) times --aln-work-median (M), i.e. work > N*M. work = pooled_read_bp * nhap
+	// * max_hap_len is a pure DP-cell count (hardware-independent), and M is the median work of a reference
+	// run, so the decision is portable across machines/cohorts. Catches monsters that are cheap in nhap but
+	// expensive in read/allele length (nhap alone misses them; --max-haps still caps nhap outright). N<=0
+	// disables. Predictive signals are recorded just above, so a skipped locus still emits its work signals.
+	// Skipping returns false => the caller writes no VCF record and the alignment loop never runs.
+	// (A wall-clock watchdog is planned as the guaranteed backstop for the tail this predictor under-shoots.)
+	double work_threshold = skip_aln_work_factor * aln_work_median;
+	if (skip_aln_work_factor > 0 && aln_work_median > 0 && predicted_aln_work_ > work_threshold){
+		logger << "SKIP_LOCUS"
+		       << "\treason=WORK_FACTOR"
+		       << "\tregion="         << region_group_->chrom() << ":" << region_group_->start() << "-" << region_group_->stop()
+		       << "\tbed_len="        << (region_group_->stop() - region_group_->start())
+		       << "\tnhap="           << num_alleles_
+		       << "\twork="           << predicted_aln_work_
+		       << "\twork_median="    << aln_work_median
+		       << "\twork_factor="    << skip_aln_work_factor
+		       << "\twork_threshold=" << work_threshold
+		       << "\tpools="          << num_aligned_pools_
+		       << "\treads="          << num_reads_
+		       << "\tmax_hap_len="    << initial_max_hap_size_
+		       << "\tpooled_read_bp=" << total_pooled_read_len_
+		       << "\ttotal_read_bp="  << total_read_bp_
+		       << "\thap_build_sec="  << total_hap_build_time_
+		       << std::endl;
+		return false;
+	}
+
 	// Align each read to each candidate haplotype and store them in the provided arrays
 	logger << "Aligning reads to each candidate haplotype" << std::endl;
 	std::vector<bool> realign_to_haplotype(num_alleles_, true);	
 	assert(realign_to_haplotype.size() == haplotype_->num_combs());
 	calc_hap_aln_probs(realign_to_haplotype);
+	if (watchdog_aborted_){ log_watchdog_skip(logger); return false; } // wall-clock watchdog: alignment timed out
 	calc_log_sample_posteriors();
 	if (ref_vcf_ == NULL){
 		// Remove alleles with no MAP genotype calls and recompute the posteriors
@@ -661,6 +753,7 @@ bool SeqStutterGenotyper::genotype(int max_total_haplotypes, int max_flank_haplo
 	if (reassemble_flanks_)
 		if (!assemble_flanks(max_total_haplotypes, max_flank_haplotypes, min_flank_freq, logger))
 			return false;
+	if (watchdog_aborted_){ log_watchdog_skip(logger); return false; } // wall-clock watchdog: re-alignment during flank reassembly timed out
 	return true;
 }
 
@@ -832,7 +925,7 @@ void SeqStutterGenotyper::get_stutter_candidate_alleles(int str_block_index, std
   std::vector<int> sample_counts(num_samples_, 0);
   std::vector< std::map<std::string, int> > sample_stutter_counts(num_samples_);
   for (unsigned int read_index = 0; read_index < num_reads_; read_index++){
-    if (traced_alns[read_index] == NULL)
+    if (traced_alns.empty() || traced_alns[read_index] == NULL)
       continue;
     AlignmentTrace* trace = traced_alns[read_index];
     if (trace->traced_aln().get_start() < str_block->start()){
@@ -907,7 +1000,12 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<int> allele_bp_diffs;
 	for (unsigned int i = 0; i < alleles.size(); i++){
 	    if (alleles[i] == "<DEL>") {
-	        allele_bp_diffs.push_back(-(int)alleles[0].size());
+	        // <DEL> is always a deletion of the whole repeat tract, so its length difference is the
+	        // tract length. Measure it against the catalog tract (region.stop()-region.start(), which is
+	        // identically END-START+1 as those are emitted below), NOT against alleles[0]: the emitted
+	        // REF also carries any flanking sequence retained for this locus, which is sample-dependent
+	        // and would make BPDIFFS differ between samples that deleted the very same tract.
+	        allele_bp_diffs.push_back(-(int)(region.stop() - region.start()));
 	        continue;
 	    }
 		allele_bp_diffs.push_back((int)alleles[i].size() - (int)alleles[0].size());
@@ -934,6 +1032,7 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	std::vector<int> unique_reads_hap_one(num_samples_, 0), unique_reads_hap_two(num_samples_, 0);
 	std::vector<int> rv_unique_reads_hap_one(num_samples_, 0), rv_unique_reads_hap_two(num_samples_, 0);
 	std::vector< std::vector<int> > bps_per_sample(num_samples_), ml_bps_per_sample(num_samples_);
+	std::vector<int> ml_reads_per_allele(num_variants, 0); // For --log-alt-alleles: # reads whose ML alignment maps to each allele
 	std::vector< std::vector<double> > log_read_phases(num_samples_);
 	std::vector<AlnList> max_LL_alns_strand_one(num_samples_), left_alns_strand_one(num_samples_);
 	std::vector<AlnList> max_LL_alns_strand_two(num_samples_), left_alns_strand_two(num_samples_);
@@ -976,6 +1075,8 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 		// Retrace alignment and ensure that it's of sufficient quality
 		double trace_start = clock();
 		int best_hap = (read_strand == 0 ? hap_a : hap_b);
+		if (log_alt_alleles_ && hap_to_allele[best_hap] >= 0 && hap_to_allele[best_hap] < num_variants)
+			ml_reads_per_allele[hap_to_allele[best_hap]]++; // ML-supporting read count per allele (--log-alt-alleles)
 		AlignmentTrace* trace = NULL;
 		if (SWITCH_OLD_ALIGN_LEN){
 		    std::pair<int,int> trace_key(pool_index_[read_index], best_hap);
@@ -1072,6 +1173,41 @@ void SeqStutterGenotyper::write_vcf_record(const std::vector<std::string>& sampl
 	// Determine an ordering for the alleles, in which they're sorted by allele length
 	std::vector<int> old_to_new, new_to_old;
 	reorder_alleles(alleles, old_to_new, new_to_old);
+
+	// Allele visibility (--log-alt-alleles): one ALT_ALLELE line per surviving ALT, combining its
+	// admission reason/support (captured during candidate generation, keyed by the stored allele sequence)
+	// with the calling counts. allele_idx == the VCF ALT number (via new_to_old) so it maps 1:1 to ALT/GT.
+	if (log_alt_alleles_){
+		HapBlock* jblock = haplotype_->get_block(hap_block_index);
+		std::vector<int> called_samples_per_allele(num_variants, 0);
+		int si = 0;
+		for (auto git = gts.begin(); git != gts.end(); ++git, ++si){
+			if (num_aligned_reads[si] > 0 && call_sample_[si].empty()){
+				if (git->first  >= 0 && git->first  < num_variants) called_samples_per_allele[git->first]++;
+				if (git->second >= 0 && git->second < num_variants) called_samples_per_allele[git->second]++;
+			}
+		}
+		for (int i = 1; i < (int)alleles.size(); i++){
+			int old_idx = new_to_old[i];
+			std::string raw_seq = jblock->get_seq(old_idx);
+			auto ait = allele_admission_.find(raw_seq);
+			std::string admit_tag = (ait != allele_admission_.end() ? ait->second
+			                          : std::string("\treason=NA\tread_count=0\tsample_count=0\tmust_inc=0\ttot_reads=0\ttot_samples=0"));
+			int cs = (old_idx < num_variants ? called_samples_per_allele[old_idx] : 0);
+			int mr = (old_idx < num_variants ? ml_reads_per_allele[old_idx]       : 0);
+			logger << "ALT_ALLELE"
+			       << "\tregion="         << region.chrom() << ":" << region.start() << "-" << region.stop()
+			       << "\tallele_idx="     << i
+			       << "\tbp_diff="        << allele_bp_diffs[old_idx]
+			       << "\tallele_len="     << alleles[old_idx].size()
+			       << admit_tag
+			       << "\tcalled_samples=" << cs
+			       << "\tml_reads="       << mr
+			       << "\tcalled_no_support=" << ((cs > 0 && mr == 0) ? 1 : 0)
+			       << "\tallele_preview=" << alleles[old_idx].substr(0, 30)
+			       << "\n";
+		}
+	}
 
 	//Print the allele count information
 	logger << "Allele counts" << std::endl;

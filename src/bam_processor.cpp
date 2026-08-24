@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <locale>
 #include <sstream>
 #include <stdlib.h>
 #include <time.h>
+#include <utility>
 
 #include "bam_processor.h"
 #include "alignment_filters.h"
@@ -481,6 +483,46 @@ void BamProcessor::read_and_filter_reads(BamCramMultiReader& reader, const std::
       aln_src.pop_back();
     }
   }
+
+  // Canonicalise the sample axis.
+  //
+  // The loop above indexes read groups by first appearance as `potential_strs` drains, and that map's
+  // key is prefixed with `file_label` (see the block near the top of this function). `file_label`
+  // increments whenever alignment.Filename() changes, and the reader merges with ORDER_ALNS_BY_FILE,
+  // so it is distinct per sample when reading N single-sample BAMs ("1_".."10_") but constant when
+  // the same reads arrive in one multi-sample BAM. Sample order was therefore a property of how the
+  // reads were packaged, not of the data: per-file mode ordered samples by a *string* sort of the
+  // labels ("9_" > "8_" > ... > "10_" > "1_", so cohort size alone re-permuted them), and a group BAM
+  // ordered them by whichever sample owned the largest read name.
+  //
+  // Downstream consumers iterate samples in this order -- HaplotypeGenerator::gen_candidate_seqs most
+  // visibly -- so calls depended on --bams order and BAM layout. Measured on chr21 N=10: 14 of 35,703
+  // records differed between per-file and group-BAM input, and reversing --bams reproduced the
+  // group-BAM result exactly. Sorting by sample name makes the order a pure function of which samples
+  // are in the cohort. Names are unique here (they are keys of rg_indices), so this is a total order.
+  if (rg_names.size() > 1){
+    std::vector<size_t> order(rg_names.size());
+    for (size_t i = 0; i < order.size(); i++)
+      order[i] = i;
+    std::sort(order.begin(), order.end(),
+	      [&rg_names](size_t a, size_t b){ return rg_names[a] < rg_names[b]; });
+
+    std::vector<std::string> sorted_names;
+    std::vector<BamAlnList>  sorted_paired, sorted_mates, sorted_unpaired;
+    sorted_names.reserve(order.size());    sorted_paired.reserve(order.size());
+    sorted_mates.reserve(order.size());    sorted_unpaired.reserve(order.size());
+    for (size_t i = 0; i < order.size(); i++){
+      sorted_names.push_back(rg_names[order[i]]);
+      sorted_paired.push_back(std::move(paired_strs_by_rg[order[i]]));
+      sorted_mates.push_back(std::move(mate_pairs_by_rg[order[i]]));
+      sorted_unpaired.push_back(std::move(unpaired_strs_by_rg[order[i]]));
+    }
+    rg_names.swap(sorted_names);
+    paired_strs_by_rg.swap(sorted_paired);
+    mate_pairs_by_rg.swap(sorted_mates);
+    unpaired_strs_by_rg.swap(sorted_unpaired);
+  }
+
 
   locus_read_filter_time_  = (clock() - locus_read_filter_time_)/CLOCKS_PER_SEC;
   total_read_filter_time_ += locus_read_filter_time_;

@@ -292,8 +292,8 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
 		     filt_log_p2s, n_p1s, n_p2s, left_alignments);
     bool run_assembly = (REQUIRE_SPANNING == 0);
     seq_genotyper = new SeqStutterGenotyper(region_group, haploid, 1, left_alignments, filt_log_p1s, filt_log_p2s, n_p1s, n_p2s, rg_names, chrom_seq,
-					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters_);
-    if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, selective_logger())) {
+					    stutter_models, ref_vcf_, selective_logger(), skip_assembly_, INDEL_FLANK_LEN, SWITCH_OLD_ALIGN_LEN, alignment_parameters_, LOG_ALT_ALLELES, MAX_LOCUS_SEC, POA_SEED, POA_CLUSTER_LIMIT);
+    if (seq_genotyper->genotype(MAX_TOTAL_HAPLOTYPES, MAX_FLANK_HAPLOTYPES, MIN_FLANK_FREQ, ALN_WORK_MEDIAN, SKIP_ALN_WORK_FACTOR, selective_logger())) {
       bool pass = true;
       // If appropriate, recalculate the stutter model using the haplotype ML alignments,
       // realign the reads and regenotype the samples
@@ -325,6 +325,32 @@ void GenotyperBamProcessor::analyze_reads_and_phasing(std::vector<BamAlnList>& a
       selective_logger() << "\t" << "Trim alignment        = "  << locus_left_aln_time_             << " seconds\n"
 			 << "\t" << " Haplotype generation  = "  << seq_genotyper->hap_build_time()  << " seconds\n"
 			 << "\t" << " Haplotype alignment   = "  << seq_genotyper->hap_aln_time()    << " seconds\n";
+
+      // Predictive alignment/generation-cost signals, for calibration. Behind --log-locus-signals
+      // (default off) to keep production logs clean. Emitted human-readably and as one machine-parseable
+      // LOCUS_SIGNALS line: alignment k = hap_aln_sec / work; POA cost is calibrated vs hap_build_sec /
+      // (total_read_bp, max_hap_len, ...). (SKIP_LOCUS, the guard audit trail, is always emitted, in genotype().)
+      if (LOG_LOCUS_SIGNALS && seq_genotyper->initial_num_alleles() >= 0){
+	selective_logger() << "\t" << " Candidate haplotypes  = "  << seq_genotyper->initial_num_alleles()   << " (nhap)\n"
+			   << "\t" << " Aligned read pools    = "  << seq_genotyper->num_aligned_pools()     << "\n"
+			   << "\t" << " Pooled read bp        = "  << seq_genotyper->total_pooled_read_len() << "\n"
+			   << "\t" << " Raw input read bp     = "  << seq_genotyper->total_read_bp()         << "\n"
+			   << "\t" << " Max haplotype length  = "  << seq_genotyper->initial_max_hap_size()  << "\n"
+			   << "\t" << " Predicted aln work    = "  << seq_genotyper->predicted_aln_work()    << " (DP cells)\n";
+	selective_logger() << "LOCUS_SIGNALS"
+			   << "\tregion="         << region_group.chrom() << ":" << region_group.start() << "-" << region_group.stop()
+			   << "\tbed_len="        << (region_group.stop() - region_group.start())
+			   << "\tnhap="           << seq_genotyper->initial_num_alleles()
+			   << "\tpools="          << seq_genotyper->num_aligned_pools()
+			   << "\treads="          << seq_genotyper->num_reads()
+			   << "\tmax_hap_len="    << seq_genotyper->initial_max_hap_size()
+			   << "\tpooled_read_bp=" << seq_genotyper->total_pooled_read_len()
+			   << "\ttotal_read_bp="  << seq_genotyper->total_read_bp()
+			   << "\twork="           << seq_genotyper->predicted_aln_work()
+			   << "\thap_build_sec="  << seq_genotyper->hap_build_time()
+			   << "\thap_aln_sec="    << seq_genotyper->hap_aln_time()
+			   << "\n";
+      }
 //			 << "\t" << " Flank assembly        = "  << seq_genotyper->assembly_time()   << " seconds\n"
 //			 << "\t" << " Posterior computation = "  << seq_genotyper->posterior_time()  << " seconds\n"
 //			 << "\t" << " Alignment traceback   = "  << seq_genotyper->aln_trace_time()  << " seconds\n";
